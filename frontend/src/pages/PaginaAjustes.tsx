@@ -28,7 +28,14 @@ export function PaginaAjustes() {
   const [vanityInput, setVanityInput] = useState("");
   const [steamIdEncontrado, setSteamIdEncontrado] = useState<string | null>(null);
 
-  // --- Cargar datos existentes al montar y cuando cambien las cuentas ---
+  // --- Forzar recarga completa al montar ---
+  useEffect(() => {
+    token.recargar();
+    cuentas.recargar();
+    sync.recargar();
+  }, []);
+
+  // Sincronizar identificador con la cuenta Steam guardada
   useEffect(() => {
     if (!cuentas.cargando && cuentas.datos) {
       const cuentaSteam = cuentas.datos.find((c) => c.platform === "steam");
@@ -37,21 +44,13 @@ export function PaginaAjustes() {
         setNombre(cuentaSteam.display_name ?? "");
       }
     }
-  }, [cuentas.datos?.length, cuentas.cargando]);
-
-  // Forzar recarga de cuentas cuando el componente se hace visible
-  useEffect(() => {
-    if (!cuentas.cargando) {
-      cuentas.recargar();
-    }
-  }, []);
+  }, [cuentas.datos]);
 
   async function obtenerSteamId64() {
     if (!vanityInput.trim()) return;
     setObteniendoSteamId(true);
     setSteamIdEncontrado(null);
     try {
-      // Llamamos a nuestro backend para evitar problemas de CORS con steamcommunity.com
       const resp = await fetch(
         `${import.meta.env.VITE_API_URL}/steam/resolve-vanity?vanity=${encodeURIComponent(vanityInput.trim())}`
       );
