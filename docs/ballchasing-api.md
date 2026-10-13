@@ -27,15 +27,34 @@ La respuesta **no** tiene `replays` ni `meta`:
 | Parametro | Comprobado |
 |---|---|
 | `count` | maximo **200**. `count=250` -> `400 invalid param "count"` |
-| `uploader=me` | **funciona solo**, sin `player-name` (200) |
-| `player-name` | **funciona solo**, sin `uploader` (200) |
-| `uploader` + `player-name` juntos | 200 (se ignoran en combinacion: devuelve 0 con `uploader=me` + un nombre ajeno) |
+| **`player-id`** | **`steam:76561199085282414`**: devuelve las partidas en las que **jugo** esa persona, la suba quien la suba. Acepta varios (`&player-id=...&player-id=...`) |
+| `player-name` | funciona, pero por nombre: si el jugador cambia de nombre se le pierde |
+| `uploader=me` | **funciona solo**, sin `player-name` (200). Devuelve solo lo que subi **esa** cuenta |
+| `uploader=<SteamID64>` | acepta tambien el id numerico |
 | `playlist` | **identificador**, no nombre: `unranked-standard` vale; `casual` y `1` dan `400 invalid "playlist"` |
 | `season` | entero, `24` responde bien |
 | `replay-date-after` / `-before` | **RFC3339**: `2026-01-01` falla con `must be in RFC3339 format`; `2026-01-01T00:00:00Z` vale |
+| `created-before` / `created-after` | filtros aparte, de la fecha de **subida**, no de la partida |
 | `next` | URL absoluta que devuelve la propia API |
 
-Esto resuelve la duda que dejo abierta la guia: **`uploader=me` no necesita `player-name`**.
+### El filtro que cambia el diseno: `player-id`
+
+Pedir `GET /replays?player-id=steam:76561199085282414` devolvio **1578 replays** de un
+jugador, y venian de subiadores distintos (`Rob`, `plumato`...).
+
+Consecuencia: **el usuario no tiene que subir sus propias partidas.** Basta con que
+registre su cuenta de juego (`steam:<su id>`) y la aplicacion encuentra todas las
+partidas en las que jugó, las suba quien las suba. Es mejor que subir replays, y ademas
+la guia dejaba la subida fuera de alcance.
+
+Por eso la ingesta seguiere por `player-id` a partir de `game_accounts`, no por
+`uploader=me`.
+
+### `player-name` frente a `player-id`
+
+Los dos funcionan, pero por nombre es frágil: un jugador que cambia su nombre en Steam
+desaparece del historico. El identificador de plataforma no cambia. Siempre que se pueda,
+`player-id`.
 
 ### Trampa: `count` + `next` rompe el cursor
 
@@ -49,6 +68,18 @@ GET /replays?count=3&next=<cursor>        -> [A, B, C]   el cursor se ignora
 ```
 
 Regla: **el enlace `next` se sigue literalmente, sin tocarlo.**
+
+## 3 bis. Subir replays (fuera de alcance, pero existe)
+
+Hay endpoint de subida: `POST /api/v2/upload?visibility=public|unlisted|private|group`,
+con `multipart/form-data` y el fichero `.replay` en el campo `file`. Devuelve `201` con
+el id de la partida creada, o `409` si ya existe.
+
+Sin fichero responde `400 failed to get multipart form: request Content-Type isn't
+multipart/form-data`, lo que confirma el metodo y el formato.
+
+La v1 **no** lo usa: el usuario ya sube sus replays como haga, y con `player-id` no hace
+falta ni que lo haga.
 
 ## 3. Detalle: `GET /replays/{id}`
 
@@ -105,6 +136,11 @@ nombres de grupo.
 El listado incluye `rocket_league_id` (identificador de la partida en el juego) y el bloque
 `uploader` con `steam_id` y `name`. Sirve para emparejar una partida con un jugador sin
 depender del nombre, que puede cambiar.
+
+Un usuario puede averiguar su SteamID64 en la URL de su perfil de Steam:
+`https://steamcommunity.com/profiles/76561199085282414/`. Es el dato que va en
+`game_accounts.platform_id`, y con el forma `steam:76561199085282414` para el filtro
+`player-id`.
 
 ## 5. Limites observados
 

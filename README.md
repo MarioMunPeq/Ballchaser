@@ -118,6 +118,29 @@ funcionando: es deliberado, fallar cerrado.
 **Ese JSON es una llave que da acceso a todos los usuarios del proyecto.** Si se filtra,
 borralo en *Project settings → Service accounts* y genera otra. Nunca lo subas a Git.
 
+## Cómo funciona Ballchasing
+
+Ballchasing es una web donde se suben partidas de Rocket League y calcula sus
+estadísticas: boost, posicionamiento, demos, disparos, cámara...
+
+- Rocket League guarda cada partida como un fichero `.replay`. En Steam están en
+  `C:\Users\<tu-usuario>\Documents\My Games\Rocket League\Replays`.
+- Se pueden subir arrastrándolos a <https://ballchasing.com> (pestaña *Upload*). Esta
+  aplicación **no** los sube.
+- Quien sube la partida es el *uploader*. Los jugadores de dentro se identifican por su
+  id de plataforma (`steam:76561199085282414`), no por su nombre.
+
+Lo importante para el diseño: **no hace falta que subas tus partidas.** El listado acepta
+filtrar por `player-id` y devuelve las partidas en las que jugaste, se las haya subido
+quien se las haya subido (comprobado: un jugador con 1578 replays de subiadores
+distintos). Por eso la ingesta usará las cuentas de juego (`game_accounts`) y no
+`uploader=me`.
+
+Detalle verificado en [`docs/ballchasing-api.md`](docs/ballchasing-api.md).
+
+Tu SteamID64 esta en la URL de tu perfil de Steam:
+`https://steamcommunity.com/profiles/76561199085282414/`.
+
 ## Credenciales de Ballchasing
 
 Cada usuario guarda su propio token, cifrado con AES-GCM. La clave es una variable de

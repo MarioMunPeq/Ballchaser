@@ -85,7 +85,9 @@ class ClienteBallchasing:
         """
         return {"Authorization": self._token, "Accept": "application/json"}
 
-    async def _get(self, ruta: str, params: dict[str, Any] | None = None) -> httpx.Response:
+    async def _get(
+        self, ruta: str, params: dict[str, Any] | list[tuple[str, Any]] | None = None
+    ) -> httpx.Response:
         """GET con limite de peticiones y reintentos ante 429 y errores de red."""
         for intento in range(self._max_intentos):
             waited = await asyncio.to_thread(self._limitador.esperar)
@@ -172,13 +174,20 @@ class ClienteBallchasing:
         limit: int = 100,
         solo_mios: bool = False,
         nombre_jugador: str | None = None,
+        player_ids: list[str] | None = None,
         playlist: str | None = None,
         season: int | None = None,
         despues_de: str | None = None,
         antes_de: str | None = None,
         siguiente: str | None = None,
     ) -> dict[str, Any]:
-        """Devuelve una pagina del listado con la forma real de la API."""
+        """Devuelve una pagina del listado con la forma real de la API.
+
+        `player_ids` es el filtro interesante: acepta identificadores de plataforma
+        (`steam:76561199085282414`) y devuelve las partidas en las que **jugo** esa
+        persona, las suba quien las suba. No hace falta que el usuario haya subido
+        nada por su cuenta.
+        """
         if siguiente is not None:
             # El enlace `next` se sigue tal cual. Anadirle `count` hace que el
             # servidor ignore el cursor y devuelva la primera pagina otra vez.
@@ -189,19 +198,21 @@ class ClienteBallchasing:
         if not 1 <= limit <= 200:
             raise ValueError("limit debe estar entre 1 y 200")
 
-        params: dict[str, Any] = {"count": limit}
+        params: list[tuple[str, Any]] = [("count", limit)]
         if solo_mios:
-            params["uploader"] = "me"
+            params.append(("uploader", "me"))
         if nombre_jugador:
-            params["player-name"] = nombre_jugador
+            params.append(("player-name", nombre_jugador))
+        for identificador in player_ids or []:
+            params.append(("player-id", identificador))
         if playlist:
-            params["playlist"] = playlist
+            params.append(("playlist", playlist))
         if season is not None:
-            params["season"] = season
+            params.append(("season", season))
         if despues_de:
-            params["replay-date-after"] = despues_de
+            params.append(("replay-date-after", despues_de))
         if antes_de:
-            params["replay-date-before"] = antes_de
+            params.append(("replay-date-before", antes_de))
 
         respuesta = await self._get("/replays", params=params)
         return self._cuerpo(respuesta)
@@ -220,6 +231,17 @@ class ClienteBallchasing:
         if not isinstance(datos, dict):
             raise RespuestaInvalida("Ballchasing devolvio un JSON inesperado.")
         return datos
+
+
+def id_de_plataforma(platform: str, platform_id: str) -> str:
+    """Construye el identificador que espera el filtro `player-id`.
+
+    Formato verificado: `steam:76561199085282414`, `ps4:gamertag`.
+    """
+    plataforma = platform.strip().lower()
+    if not plataforma or not platform_id.strip():
+        raise ValueError("Plataforma e identificador son obligatorios")
+    return f"{plataforma}:{platform_id.strip()}"
 
 
 def validar_formato_de_token(token: str) -> str:

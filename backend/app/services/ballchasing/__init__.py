@@ -1,6 +1,10 @@
 """Cliente de la API de Ballchasing."""
 
-from app.services.ballchasing.client import ClienteBallchasing, validar_formato_de_token
+from app.services.ballchasing.client import (
+    ClienteBallchasing,
+    id_de_plataforma,
+    validar_formato_de_token,
+)
 from app.services.ballchasing.errors import (
     CuotaAgotada,
     ErrorBallchasing,
@@ -16,5 +20,6 @@ __all__ = [
     "LimitadorDePeticiones",
     "RespuestaInvalida",
     "TokenInvalido",
+    "id_de_plataforma",
     "validar_formato_de_token",
 ]

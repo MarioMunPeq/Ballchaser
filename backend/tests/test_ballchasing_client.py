@@ -12,6 +12,7 @@ from app.services.ballchasing import (
     CuotaAgotada,
     ErrorBallchasing,
     TokenInvalido,
+    id_de_plataforma,
     validar_formato_de_token,
 )
 from app.services.ballchasing.rate_limit import BolsaDeTokens, LimitadorDePeticiones
@@ -83,6 +84,49 @@ async def test_listar_manda_los_filtros(
         await cliente.listar_replays(limit=1, **kwargs)
 
     assert param_esperado in ruta.calls.last.request.url.params
+
+
+async def test_listar_por_identificador_de_jugador(cliente: ClienteBallchasing) -> None:
+    """Filtra por `steam:<id>`, no por nombre: el nombre puede cambiar."""
+    with respx.mock:
+        ruta = respx.get(f"{BASE}/replays").mock(
+            return_value=httpx.Response(200, json={"list": [], "count": 0})
+        )
+        await cliente.listar_replays(limit=5, player_ids=["steam:76561199085282414"])
+
+    assert ruta.calls.last.request.url.params["player-id"] == "steam:76561199085282414"
+
+
+async def test_listar_con_varias_cuentas_repite_el_parametro(
+    cliente: ClienteBallchasing,
+) -> None:
+    """Con varias cuentas se manda `player-id` repetido, no una lista en un valor."""
+    with respx.mock:
+        ruta = respx.get(f"{BASE}/replays").mock(
+            return_value=httpx.Response(200, json={"list": []})
+        )
+        await cliente.listar_replays(limit=5, player_ids=["steam:111", "epic:222"])
+
+    assert ruta.calls.last.request.url.params.get_list("player-id") == ["steam:111", "epic:222"]
+
+
+@pytest.mark.parametrize(
+    ("platform", "platform_id", "esperado"),
+    [
+        ("steam", "76561199085282414", "steam:76561199085282414"),
+        ("Steam", "76561199085282414", "steam:76561199085282414"),
+        ("ps4", "gamertag", "ps4:gamertag"),
+        ("steam", " 123 ", "steam:123"),
+    ],
+)
+def test_id_de_plataforma(platform: str, platform_id: str, esperado: str) -> None:
+    assert id_de_plataforma(platform, platform_id) == esperado
+
+
+@pytest.mark.parametrize(("platform", "platform_id"), [("steam", ""), ("", "123")])
+def test_id_de_plataforma_rechaza_vacios(platform: str, platform_id: str) -> None:
+    with pytest.raises(ValueError, match="obligatorios"):
+        id_de_plataforma(platform, platform_id)
 
 
 async def test_seguir_next_no_añade_parametros(cliente: ClienteBallchasing) -> None:
