@@ -9,7 +9,10 @@ dependencies = [
     "pydantic>=2.9",
     "pydantic-settings>=2.6",
     "httpx>=0.27",
-    "sqlalchemy>=2.0.36",
+    # El techo en 2.1 es intencionado: las extensiones C de SQLAlchemy 2.1 fallan
+# ("InternalTraversal object is not callable") cuando hay un tracer activo, lo
+# que rompe `pytest --cov` y falsea la cobertura.
+"sqlalchemy[asyncio]>=2.0.36,<2.1",
     "alembic>=1.14",
     "psycopg[binary]>=3.2",
     "firebase-admin>=6.5",
@@ -23,6 +26,7 @@ dev = [
     "pytest>=8.3",
     "pytest-asyncio>=0.24",
     "pytest-cov>=6.0",
+    "aiosqlite>=0.20",
     "respx>=0.21",
     "ruff>=0.8",
     "mypy>=1.13",
@@ -77,3 +81,6 @@ filterwarnings = ["error::DeprecationWarning"]
 [tool.coverage.run]
 source = ["app"]
 branch = true
+# SQLAlchemy asincrono hace `await` dentro de greenlets; sin esta opcion coverage
+# pierde el trazado al cambiar de contexto y subestima la cobertura.
+concurrency = ["greenlet", "thread"]

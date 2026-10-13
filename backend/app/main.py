@@ -12,6 +12,7 @@ from starlette.middleware.base import RequestResponseEndpoint
 from app import __version__
 from app.api.router import api_router
 from app.core.config import settings
+from app.core.errors import register_exception_handlers
 from app.core.logging import configure_logging
 
 configure_logging()
@@ -58,6 +59,7 @@ def create_app() -> FastAPI:
         return response
 
     app.include_router(api_router)
+    register_exception_handlers(app)
     return app
 
 

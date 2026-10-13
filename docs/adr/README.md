@@ -25,9 +25,9 @@ Que se decide.
 Que se gana, que se pierde y que queda fuera.
 ```
 
-## Decisiones a documentar
+## Decisiones
 
-1. Firebase para identidad.
+1. [0001. Firebase Authentication para la identidad](0001-firebase-para-identidad.md) — Aceptada.
 2. Cola en Postgres en vez de Redis.
 3. Token de Ballchasing por usuario.
 4. Guardar solo metricas seleccionadas.

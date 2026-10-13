@@ -12,7 +12,7 @@ del repositorio.
 | Fase | Contenido | Estado |
 |---|---|---|
 | 0 | Esqueleto: `pyproject`, ruff, pre-commit, FastAPI con `/health`, Dockerfile, docker-compose, CI | Hecho |
-| 1 | Firebase Auth, `users`, `GET /me`, `DELETE /me` | Pendiente |
+| 1 | Firebase Auth, `users`, `GET /me`, `DELETE /me` | Hecho (falta el proyecto de Firebase en la nube) |
 | 2 | Cifrado del token de Ballchasing y `game_accounts` | Pendiente |
 | 3 | Cliente Ballchasing, ingesta, cola `sync_jobs` y worker | Pendiente |
 | 4 | API de estadisticas y tendencias | Pendiente |
@@ -24,8 +24,11 @@ del repositorio.
 ```
 backend/
   app/
-    api/         # routers
-    core/        # configuracion y logging
+    api/routes/  # health, users (/me)
+    core/         # configuracion, seguridad (Firebase), errores, logging
+    db/           # modelos, sesion
+    services/     # logica de usuario
+  migrations/     # Alembic
   tests/
   Dockerfile
   pyproject.toml
@@ -35,33 +38,80 @@ docker-compose.yml
 .github/workflows/
 ```
 
-## Desarrollo local
+## Requisitos previos
 
-Requisitos: Python 3.12+ y Docker.
+- Python 3.12 o superior.
+- Docker Desktop (opcional: solo hace falta para levantar Postgres en local). Docker
+  Desktop necesita WSL2; en Windows se instala con `wsl --install` desde una terminal de
+  **administrador** y despues hay que reiniciar el equipo.
+- Un proyecto de Firebase (solo para probar el login de verdad; los tests no lo necesitan).
+
+## Puesta en marcha
+
+### 1. Dependencias de Python
 
 ```bash
-git clone <repo> && cd ballchaser
 cd backend
 python -m venv .venv
-.venv\Scripts\activate        # Windows
+.venv\Scripts\activate        # Windows: .venv\Scripts\activate
 pip install -e ".[dev]"
 cp .env.example .env
 ```
 
-Levantar la API y Postgres:
+### 2. Base de datos
+
+Con Docker:
+
+```bash
+docker compose up -d db
+cd backend && alembic upgrade head
+```
+
+O con una URL propia en `DATABASE_URL` (Neon en produccion):
+
+```bash
+cd backend && alembic upgrade head
+```
+
+### 3. API
 
 ```bash
 docker compose up --build
 ```
 
 La API queda en <http://localhost:8000>; la documentacion interactiva, en
-<http://localhost:8000/docs> (solo fuera de produccion).
+<http://localhost:8000/docs> (solo fuera de produccion). Sin Docker, tambien vale:
+
+```bash
+cd backend && uvicorn app.main:app --reload
+```
 
 Comprobar que todo va bien:
 
 ```bash
 curl http://localhost:8000/health
 # {"status":"ok","version":"0.1.0"}
+```
+
+### 4. Firebase
+
+1. Crear el proyecto en <https://console.firebase.google.com> (plan Spark).
+2. En *Authentication → Sign-in method*, activar **Email/Password** y **Google**.
+3. En *Project settings → Service accounts*, generar una clave privada y meter el JSON en
+   la variable `FIREBASE_CREDENTIALS_JSON` (en Render, como variable de entorno).
+4. El frontend hara `signInWithEmailAndPassword` o `signInWithPopup` y enviara
+   `getIdToken()` en la cabecera `Authorization: Bearer`.
+
+Sin esas credenciales, las rutas `/me` responden 503 `auth_not_configured` y las demas
+siguen funcionando: es deliberado, fallar cerrado.
+
+## Migraciones
+
+```bash
+alembic revision --autogenerate -m "mensaje"   # crea la migracion desde los modelos
+alembic upgrade head                           # aplica
+alembic downgrade -1                           # deshace el ultimo paso
+alembic upgrade head --sql                      # genera el SQL sin conectar (lo usa CI)
 ```
 
 ## Calidad
@@ -72,6 +122,13 @@ mypy                                   # tipos
 pytest                                 # tests
 pre-commit install                     # hooks en el commit
 ```
+
+Notas sobre los tests:
+
+- Usan **SQLite en memoria**, asi que no necesitan Docker. Para correrlos contra Postgres:
+  `TEST_DATABASE_URL=postgresql+psycopg://ballchaser:ballchaser@localhost:5432/ballchaser pytest`.
+- Firebase se sustituye por un verificador falso: los tests de auth comprueban que un token
+  invalido no pasa, sin tocar la red.
 
 ## Hosting previsto
 

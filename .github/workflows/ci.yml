@@ -43,6 +43,9 @@ jobs:
       - name: Tests
         run: pytest --cov=app --cov-report=term-missing
 
+      - name: Migraciones (SQL generado para Postgres)
+        run: alembic upgrade head --sql
+
       - name: Auditoria de dependencias
         run: pip-audit --strict
 
