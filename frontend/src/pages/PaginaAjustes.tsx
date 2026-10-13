@@ -33,17 +33,17 @@ export function PaginaAjustes() {
     setObteniendoSteamId(true);
     setSteamIdEncontrado(null);
     try {
+      // Llamamos a nuestro backend para evitar problemas de CORS con steamcommunity.com
       const resp = await fetch(
-        `https://steamcommunity.com/id/${encodeURIComponent(vanityInput.trim())}/?xml=1`
+        `${import.meta.env.VITE_API_URL}/steam/resolve-vanity?vanity=${encodeURIComponent(vanityInput.trim())}`
       );
-      if (!resp.ok) throw new Error("No se pudo obtener el perfil");
-      const xml = await resp.text();
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(xml, "text/xml");
-      const steamId = doc.querySelector("steamID64")?.textContent;
-      if (!steamId) throw new Error("No se encontró steamID64 en el XML");
-      setSteamIdEncontrado(steamId);
-      setIdentificador(steamId);
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err?.error?.message ?? "No se pudo resolver el nombre");
+      }
+      const data = await resp.json();
+      setSteamIdEncontrado(data.steamId);
+      setIdentificador(data.steamId);
     } catch (e) {
       setAviso(e instanceof Error ? e.message : "No se pudo obtener el SteamID64");
     } finally {

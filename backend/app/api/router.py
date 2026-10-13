@@ -8,6 +8,7 @@ from app.api.routes import (
     health,
     replays,
     stats,
+    steam,
     sync,
     users,
 )
@@ -20,3 +21,4 @@ api_router.include_router(game_accounts.router, prefix="/me/game-accounts", tags
 api_router.include_router(sync.router, tags=["sync"])
 api_router.include_router(replays.router, tags=["datos"])
 api_router.include_router(stats.router, tags=["datos"])
+api_router.include_router(steam.router, prefix="/steam", tags=["steam"])
