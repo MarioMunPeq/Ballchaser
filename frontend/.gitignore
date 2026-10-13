@@ -1,0 +1,12 @@
+node_modules/
+dist/
+coverage/
+*.local
+
+# Configuracion con claves y URLs: nunca se sube.
+.env
+.env.*
+!.env.example
+
+.DS_Store
+*.log

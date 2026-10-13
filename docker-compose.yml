@@ -10,7 +10,9 @@ services:
       LOG_LEVEL: INFO
       LOG_JSON: "true"
       DATABASE_URL: postgresql+psycopg://ballchaser:ballchaser@db:5432/ballchaser
-      CORS_ORIGINS: '["http://localhost:5173"]'
+      # El frontend de desarrollo corre en 5173; el desplegado en GitHub Pages
+      # tendra que anadirse aqui (y en Render) cuando exista.
+      CORS_ORIGINS: '["http://localhost:5173","http://127.0.0.1:5173"]'
       FIREBASE_CREDENTIALS_FILE: /run/secrets/firebase-service-account.json
     volumes:
       # Solo en local: la clave de servicio se monta, nunca se copia a la imagen.

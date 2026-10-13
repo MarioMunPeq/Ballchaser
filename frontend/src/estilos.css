@@ -1,0 +1,602 @@
+/* Tema oscuro, móvil primero. Sin framework de CSS: son pocas reglas y mantenerlas a
+   mano evita una dependencia mas. */
+
+:root {
+  --fondo: #0b0f17;
+  --fondo-alto: #131a26;
+  --borde: #222c3d;
+  --texto: #e7edf5;
+  --texto-tenue: #8b98ad;
+  --acento: #4da3ff;
+  --acento-suave: rgba(77, 163, 255, 0.15);
+  --bien: #3ddc97;
+  --mal: #ff6b6b;
+  --neutro: #7f8ea6;
+  --radio: 12px;
+  --sombra: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --fondo: #f6f8fb;
+    --fondo-alto: #ffffff;
+    --borde: #dfe5ee;
+    --texto: #10151f;
+    --texto-tenue: #5d6b80;
+    --acento-suave: rgba(77, 163, 255, 0.12);
+    --sombra: 0 1px 2px rgba(16, 21, 31, 0.08);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--fondo);
+  color: var(--texto);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-size: 0.9em;
+}
+
+/* --- cabecera --- */
+
+.cabecera {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 1rem;
+  background: color-mix(in srgb, var(--fondo) 88%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--borde);
+}
+
+.cabecera .marca {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-right: auto;
+}
+
+.cabecera nav {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.cabecera nav a {
+  padding: 0.35rem 0.7rem;
+  border-radius: 8px;
+  color: var(--texto-tenue);
+  text-decoration: none;
+  font-size: 0.95rem;
+}
+
+.cabecera nav a:hover {
+  color: var(--texto);
+  background: var(--fondo-alto);
+}
+
+.cabecera nav a.activo {
+  color: var(--acento);
+  background: var(--acento-suave);
+}
+
+/* --- estructura --- */
+
+.pagina {
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: 1rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.centro {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.caja {
+  width: min(26rem, 100%);
+  background: var(--fondo-alto);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 1.5rem;
+  box-shadow: var(--sombra);
+}
+
+.tarjeta {
+  background: var(--fondo-alto);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 1rem;
+  box-shadow: var(--sombra);
+}
+
+.tarjeta-cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+h1, h2, h3 {
+  margin: 0 0 0.5rem;
+  letter-spacing: -0.01em;
+}
+
+h2 {
+  font-size: 1.05rem;
+}
+
+h3.sub {
+  font-size: 0.9rem;
+  color: var(--texto-tenue);
+  margin-top: 1rem;
+}
+
+/* --- KPIs --- */
+
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+@media (min-width: 40rem) {
+  .kpis {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 60rem) {
+  .kpis {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
+.kpi {
+  background: var(--fondo);
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  padding: 0.6rem 0.7rem;
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.kpi-etiqueta {
+  font-size: 0.75rem;
+  color: var(--texto-tenue);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.kpi-valor {
+  font-size: 1.4rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kpi-detalle {
+  font-size: 0.78rem;
+  color: var(--texto-tenue);
+}
+
+.kpis-vacias .kpi-valor {
+  color: var(--texto-tenue);
+}
+
+/* --- gráficas --- */
+
+.grafica {
+  margin: 0;
+}
+
+.grafica svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.linea {
+  fill: none;
+  stroke: var(--acento);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.punto {
+  fill: var(--acento);
+}
+
+.rejilla {
+  stroke: var(--borde);
+  stroke-width: 1;
+}
+
+.eje-texto {
+  fill: var(--texto-tenue);
+  font-size: 9px;
+}
+
+.pie-grafica {
+  margin: 0.5rem 0 0;
+  font-size: 0.78rem;
+  color: var(--texto-tenue);
+}
+
+/* --- barras --- */
+
+.barras {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.barra-fila {
+  display: grid;
+  grid-template-columns: 7.5rem 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.barra-nombre {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--texto-tenue);
+}
+
+.barra-pista {
+  background: var(--fondo);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.barra {
+  height: 10px;
+  border-radius: 999px;
+}
+
+.barra.buena {
+  background: var(--bien);
+}
+
+.barra.mala {
+  background: var(--acento);
+}
+
+.barra-valor {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.barra-valor small {
+  color: var(--texto-tenue);
+}
+
+/* --- tabla --- */
+
+.tabla-envoltorio {
+  overflow-x: auto;
+  margin: 0 -0.25rem;
+}
+
+.tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.tabla th,
+.tabla td {
+  padding: 0.45rem 0.5rem;
+  text-align: left;
+  border-bottom: 1px solid var(--borde);
+  white-space: nowrap;
+}
+
+.tabla th {
+  color: var(--texto-tenue);
+  font-weight: 600;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.tabla td.num,
+.tabla th.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.tabla .truncar {
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 40rem) {
+  .tabla thead {
+    display: none;
+  }
+
+  .tabla tr {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.15rem 0.5rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--borde);
+  }
+
+  .tabla td {
+    border: 0;
+    padding: 0.1rem 0;
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .tabla td::before {
+    content: attr(data-etiqueta);
+    color: var(--texto-tenue);
+    font-size: 0.78rem;
+  }
+
+  .tabla td.num {
+    text-align: right;
+  }
+}
+
+.insignia {
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.insignia.win {
+  background: color-mix(in srgb, var(--bien) 20%, transparent);
+  color: var(--bien);
+}
+
+.insignia.loss {
+  background: color-mix(in srgb, var(--mal) 20%, transparent);
+  color: var(--mal);
+}
+
+.insignia.tie {
+  background: color-mix(in srgb, var(--neutro) 20%, transparent);
+  color: var(--neutro);
+}
+
+/* --- formularios --- */
+
+form {
+  display: grid;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+}
+
+label {
+  font-size: 0.82rem;
+  color: var(--texto-tenue);
+}
+
+input,
+select {
+  width: 100%;
+  padding: 0.55rem 0.65rem;
+  border-radius: 9px;
+  border: 1px solid var(--borde);
+  background: var(--fondo);
+  color: var(--texto);
+  font: inherit;
+  font-size: 0.95rem;
+}
+
+input:focus,
+select:focus {
+  outline: 2px solid var(--acento);
+  outline-offset: 1px;
+}
+
+button {
+  padding: 0.55rem 0.9rem;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: var(--acento);
+  color: #04121f;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button.secundario {
+  background: transparent;
+  border-color: var(--borde);
+  color: var(--texto);
+}
+
+button.secundario:hover:not(:disabled) {
+  background: var(--fondo);
+}
+
+button.peligro {
+  color: var(--mal);
+  border-color: color-mix(in srgb, var(--mal) 40%, transparent);
+}
+
+button.perfil {
+  font-size: 0.8rem;
+  padding: 0.3rem 0.6rem;
+  max-width: 10rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.filtros select {
+  width: auto;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.85rem;
+}
+
+.chip {
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--borde);
+  background: transparent;
+  color: var(--texto-tenue);
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.chip.activo {
+  background: var(--acento-suave);
+  border-color: transparent;
+  color: var(--acento);
+}
+
+.interruptor {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--texto);
+  font-size: 0.9rem;
+}
+
+.interruptor input {
+  width: auto;
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.separador {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 1rem 0;
+  color: var(--texto-tenue);
+  font-size: 0.8rem;
+}
+
+.separador::before,
+.separador::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--borde);
+}
+
+/* --- textos --- */
+
+.nota,
+.vacio {
+  color: var(--texto-tenue);
+  font-size: 0.85rem;
+}
+
+.vacio {
+  padding: 1.5rem 0;
+  text-align: center;
+}
+
+.aviso {
+  padding: 0.6rem 0.75rem;
+  border-radius: 9px;
+  background: var(--fondo);
+  border: 1px solid var(--borde);
+  font-size: 0.87rem;
+  margin: 0.5rem 0 0;
+}
+
+.aviso.error {
+  border-color: color-mix(in srgb, var(--mal) 45%, transparent);
+  color: var(--mal);
+}
+
+.estado {
+  font-size: 0.9rem;
+  color: var(--texto-tenue);
+}
+
+.estado.ok {
+  color: var(--bien);
+}
+
+.lista-cuentas {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.lista-cuentas li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.55rem;
+  background: var(--fondo);
+  border: 1px solid var(--borde);
+  border-radius: 9px;
+  font-size: 0.88rem;
+}
+
+.lista-cuentas li button {
+  margin-left: auto;
+  padding: 0.25rem 0.55rem;
+  font-size: 0.8rem;
+}
+
+.apodo {
+  color: var(--texto-tenue);
+}
+
+.subtitulo {
+  color: var(--texto-tenue);
+  margin: -0.35rem 0 1rem;
+  font-size: 0.92rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

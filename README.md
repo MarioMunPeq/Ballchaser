@@ -16,7 +16,7 @@ del repositorio.
 | 2 | Cifrado del token de Ballchasing y `game_accounts` | Hecho |
 | 3 | Cliente Ballchasing, ingesta, cola `sync_jobs` y worker | Hecho (falta el cron de GitHub Actions) |
 | 4 | API de estadisticas y tendencias | Hecho |
-| 5 | Frontend React + Vite | Pendiente |
+| 5 | Frontend React + Vite | Hecho (falta la config web de Firebase y el despliegue) |
 | 6 | Observabilidad, Prometheus, README final, ADR | Pendiente |
 
 ## Estructura
@@ -36,6 +36,7 @@ docs/
   adr/
 docker-compose.yml
 .github/workflows/
+frontend/            # React + Vite + TS, tema oscuro, movil primero
 ```
 
 ## Requisitos previos
@@ -226,6 +227,50 @@ Decisiones que conviene conocer:
 Rendimiento medido con 3000 partidas: el listado filtrado usa los índices y tarda menos
 de 1 ms; el resumen y las tendencias, ~1 y ~5 ms. Detalle en
 [`docs/rendimiento.md`](docs/rendimiento.md).
+
+## Frontend
+
+React + Vite + TypeScript, tema oscuro, pensado para móvil primero.
+
+```bash
+cd frontend
+npm install
+cp .env.example .env.local   # y rellena las 4 variables de Firebase
+npm run dev                  # http://localhost:5173
+```
+
+Las cuatro variables de Firebase salen de *Project settings → Your apps → Web app*.
+Son **valores publicos** (identifican el proyecto, no dan acceso): lo que protege de
+verdad es que la API verifique el ID token en el servidor.
+
+La API tiene que permitir el origen del frontend en CORS. En local ya esta
+(`http://localhost:5173`). Al desplegar en GitHub Pages habra que anadir
+`https://<usuario>.github.io` a `CORS_ORIGINS` en Render.
+
+### Decisiones del frontend
+
+- **D3 solo para lo matematico** (escalas, ejes, forma de la linea) y React para el
+  DOM. Se evita `d3.select()` sobre el SVG porque React ya gestiona el DOM.
+- **Numeros y fechas formateados a mano**, sin `toLocaleString`. Su resultado depende de
+  los datos de idioma del runtime: en un Node con ICU reducido devuelve `1234` en vez de
+  `1.234`, y la misma pantalla se veria distinta segun donde corra.
+- **Los periodos sin datos no se pintan.** La serie se filtra antes de escalar, para que
+  un 0 donde no jugaste no parezca una caida de rendimiento.
+- **Tests solo de logica pura** (formateo, series, escala del eje): es donde se rompen
+  las cosas y no depende del DOM. Los componentes los cubre el navegador.
+
+| Comando | Que hace |
+|---|---|
+| `npm run dev` | Servidor de desarrollo |
+| `npm run build` | Compila a `dist/` (comprueba tipos antes) |
+| `npm run typecheck` | Solo `tsc --noEmit`, en modo estricto |
+| `npm run lint` | ESLint |
+| `npm test` | Vitest |
+
+Despliegue: `.github/workflows/deploy-frontend.yml` publica en GitHub Pages en cada push
+a `main`. Hay que activar **Settings → Pages → Source: GitHub Actions**. El workflow
+copia `index.html` a `404.html` porque Pages no reescribe rutas y, sin eso, recargar en
+`/ajustes` daria un 404.
 
 ## Migraciones
 

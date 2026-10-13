@@ -1,0 +1,73 @@
+name: deploy-frontend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "frontend/**"
+  workflow_dispatch:
+
+# GitHub Pages publica con una clave de despliegue que hay que generar en
+# Settings > Pages > Build and deployment > Deployment key.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Nunca dos despliegues a la vez: el ultimo que llega es el que se publica.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Compilar y publicar
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+
+      - name: Build
+        # BASE_PATH hace que las rutas sirvan desde /<repo>/ y no desde la raiz del
+        # dominio, que es como funciona un proyecto de usuario en Pages.
+        run: npm run build
+        env:
+          BASE_PATH: /${{ github.event.repository.name }}/
+
+      - uses: actions/configure-pages@v5
+        id: paginas
+
+      # GitHub Pages no reescribe rutas: si alguien recarga en /ajustes recibe un 404.
+      # Copiar el index como 404.html hace que la SPA se sirva igual.
+      - name: Fallback de rutas
+        run: cp dist/index.html dist/404.html
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/dist
+
+    environment:
+      name: github-pages
+      url: ${{ steps.paginas.outputs.page_url }}
+
+  deploy:
+    name: Publicar
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.paginas.outputs.page_url }}
+    steps:
+      - id: paginas
+        uses: actions/configure-pages@v5
+      - uses: actions/deploy-pages@v4
