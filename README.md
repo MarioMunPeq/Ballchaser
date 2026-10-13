@@ -12,8 +12,8 @@ del repositorio.
 | Fase | Contenido | Estado |
 |---|---|---|
 | 0 | Esqueleto: `pyproject`, ruff, pre-commit, FastAPI con `/health`, Dockerfile, docker-compose, CI | Hecho |
-| 1 | Firebase Auth, `users`, `GET /me`, `DELETE /me` | Hecho (falta el proyecto de Firebase en la nube) |
-| 2 | Cifrado del token de Ballchasing y `game_accounts` | Pendiente |
+| 1 | Firebase Auth, `users`, `GET /me`, `DELETE /me` | Hecho |
+| 2 | Cifrado del token de Ballchasing y `game_accounts` | Hecho |
 | 3 | Cliente Ballchasing, ingesta, cola `sync_jobs` y worker | Pendiente |
 | 4 | API de estadisticas y tendencias | Pendiente |
 | 5 | Frontend React + Vite | Pendiente |
@@ -158,6 +158,14 @@ Notas sobre los tests:
 | `backend` | ruff, mypy, tests con cobertura, `pip-audit` y el SQL de las migraciones |
 | `backend-postgres` | los mismos tests contra un Postgres real, mas el ciclo `upgrade / downgrade / upgrade` de Alembic |
 | `docker` | construye la imagen del backend |
+
+## Documentacion
+
+| Documento | Que contiene |
+|---|---|
+| [`Guia.md`](Guia.md) | Especificacion original, fases y decisiones abiertas |
+| [`docs/ballchasing-api.md`](docs/ballchasing-api.md) | La API de Ballchasing verificada con peticiones reales: filtros, paginacion y forma exacta de las estadisticas |
+| [`docs/adr/`](docs/adr/) | Decisiones tecnicas con su contexto y sus consecuencias |
 
 ## Hosting previsto
 
