@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import {
   useSesion,
@@ -27,6 +27,21 @@ export function PaginaAjustes() {
   const [obteniendoSteamId, setObteniendoSteamId] = useState(false);
   const [vanityInput, setVanityInput] = useState("");
   const [steamIdEncontrado, setSteamIdEncontrado] = useState<string | null>(null);
+
+  // --- Cargar datos existentes al montar ---
+  useEffect(() => {
+    async function cargarDatos() {
+      if (!cuentas.cargando) {
+        const cuentasData = cuentas.datos ?? [];
+        const cuentaSteam = cuentasData.find((c) => c.platform === "steam");
+        if (cuentaSteam) {
+          setIdentificador(cuentaSteam.platform_id);
+          setNombre(cuentaSteam.display_name ?? "");
+        }
+      }
+    }
+    cargarDatos();
+  }, [cuentas.datos, cuentas.cargando]);
 
   async function obtenerSteamId64() {
     if (!vanityInput.trim()) return;
