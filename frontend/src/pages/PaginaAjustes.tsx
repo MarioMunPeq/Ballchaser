@@ -28,20 +28,23 @@ export function PaginaAjustes() {
   const [vanityInput, setVanityInput] = useState("");
   const [steamIdEncontrado, setSteamIdEncontrado] = useState<string | null>(null);
 
-  // --- Cargar datos existentes al montar ---
+  // --- Cargar datos existentes al montar y cuando cambien las cuentas ---
   useEffect(() => {
-    async function cargarDatos() {
-      if (!cuentas.cargando) {
-        const cuentasData = cuentas.datos ?? [];
-        const cuentaSteam = cuentasData.find((c) => c.platform === "steam");
-        if (cuentaSteam) {
-          setIdentificador(cuentaSteam.platform_id);
-          setNombre(cuentaSteam.display_name ?? "");
-        }
+    if (!cuentas.cargando && cuentas.datos) {
+      const cuentaSteam = cuentas.datos.find((c) => c.platform === "steam");
+      if (cuentaSteam) {
+        setIdentificador(cuentaSteam.platform_id);
+        setNombre(cuentaSteam.display_name ?? "");
       }
     }
-    cargarDatos();
-  }, [cuentas.datos, cuentas.cargando]);
+  }, [cuentas.datos?.length, cuentas.cargando]);
+
+  // Forzar recarga de cuentas cuando el componente se hace visible
+  useEffect(() => {
+    if (!cuentas.cargando) {
+      cuentas.recargar();
+    }
+  }, []);
 
   async function obtenerSteamId64() {
     if (!vanityInput.trim()) return;

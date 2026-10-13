@@ -79,15 +79,24 @@ export function useDatos<T>(pedir: () => Promise<T>, deps: unknown[]): EstadoCar
   const [error, setError] = useState<string | null>(null);
   const [contador, setContador] = useState(0);
 
+  // Ejecutar petición inicial y cuando cambien las deps
   useEffect(() => {
     let vivo = true;
     setCargando(true);
     setError(null);
 
-    pedir()
-      .then((r) => vivo && setDatos(r))
-      .catch((e: Error) => vivo && setError(e.message))
-      .finally(() => vivo && setCargando(false));
+    const ejecutar = async () => {
+      try {
+        const r = await pedir();
+        if (vivo) setDatos(r);
+      } catch (e) {
+        if (vivo) setError(e instanceof Error ? e.message : "Error");
+      } finally {
+        if (vivo) setCargando(false);
+      }
+    };
+
+    ejecutar();
 
     return () => {
       vivo = false;
@@ -95,7 +104,12 @@ export function useDatos<T>(pedir: () => Promise<T>, deps: unknown[]): EstadoCar
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...deps, contador]);
 
-  return { datos, cargando, error, recargar: () => setContador((c) => c + 1) };
+  // Función para forzar recarga manual
+  const recargar = useCallback(() => {
+    setContador((c) => c + 1);
+  }, []);
+
+  return { datos, cargando, error, recargar };
 }
 
 export const usePerfil = () => useDatos<UserProfile>(() => api.perfil(), []);
