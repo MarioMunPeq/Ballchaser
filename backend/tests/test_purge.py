@@ -117,11 +117,22 @@ async def test_no_se_borra_una_partida_que_usa_otro_usuario(
     assert await session.scalar(select(func.count()).select_from(Replay)) == 1
 
 
-async def test_no_se_borran_las_estadisticas_de_otro_jugador(
+async def test_no_se_borran_las_estadisticas_de_otro_usuario(
     client: AsyncClient, session: AsyncSession
 ) -> None:
-    """En la misma partida hay stats de varios; solo se van las del usuario borrado."""
+    """Si otro usuario sigue jugando esa partida, la partida se queda y con ella
+    sus estadisticas: solo se van las del usuario borrado."""
     await _datos_de_prueba(session)
+
+    otro = User(email="otro@example.com", firebase_uid="uid-otro")
+    session.add(otro)
+    await session.commit()
+    await session.refresh(otro)
+    cuenta = GameAccount(user_id=otro.id, platform="steam", platform_id="76561199000000999")
+    session.add(cuenta)
+    await session.commit()
+    await session.refresh(cuenta)
+
     session.add(
         PlayerStat(
             replay_id="aaaaaaaa-0000-4000-8000-000000000001",
@@ -132,6 +143,15 @@ async def test_no_se_borran_las_estadisticas_de_otro_jugador(
             score=400,
         )
     )
+    session.add(
+        UserReplay(
+            user_id=otro.id,
+            replay_id="aaaaaaaa-0000-4000-8000-000000000001",
+            game_account_id=cuenta.id,
+            team="orange",
+            result="loss",
+        )
+    )
     await session.commit()
 
     await client.request("DELETE", "/me", headers=bearer("token-alice"))
@@ -139,3 +159,27 @@ async def test_no_se_borran_las_estadisticas_de_otro_jugador(
     restantes = list(await session.scalars(select(PlayerStat)))
     assert len(restantes) == 1
     assert restantes[0].platform_id == "76561199000000999"
+
+
+async def test_las_estadisticas_de_otros_desaparecen_si_la_partida_se_queda_rufia(
+    client: AsyncClient, session: AsyncSession
+) -> None:
+    """Sin nadie mas que referencie la partida, se borra entera y con ella todas sus
+    estadisticas. No queda nada de esa partida en la base."""
+    await _datos_de_prueba(session)
+    session.add(
+        PlayerStat(
+            replay_id="aaaaaaaa-0000-4000-8000-000000000001",
+            platform="steam",
+            platform_id="76561199000000999",
+            name="Rival",
+            team="orange",
+            score=400,
+        )
+    )
+    await session.commit()
+
+    await client.request("DELETE", "/me", headers=bearer("token-alice"))
+
+    assert await session.scalar(select(func.count()).select_from(PlayerStat)) == 0
+    assert await session.scalar(select(func.count()).select_from(Replay)) == 0

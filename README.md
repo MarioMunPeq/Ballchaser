@@ -15,7 +15,7 @@ del repositorio.
 | 1 | Firebase Auth, `users`, `GET /me`, `DELETE /me` | Hecho |
 | 2 | Cifrado del token de Ballchasing y `game_accounts` | Hecho |
 | 3 | Cliente Ballchasing, ingesta, cola `sync_jobs` y worker | Hecho (falta el cron de GitHub Actions) |
-| 4 | API de estadisticas y tendencias | Pendiente |
+| 4 | API de estadisticas y tendencias | Hecho |
 | 5 | Frontend React + Vite | Pendiente |
 | 6 | Observabilidad, Prometheus, README final, ADR | Pendiente |
 
@@ -199,6 +199,34 @@ Decisiones que importan al leer el codigo:
 `DELETE /me` borra también las estadísticas del jugador y las partidas que se quedan sin
 referencia: son datos personales de una cuenta que ya no existe.
 
+## API de datos
+
+Todas exigen token de Firebase y siempre devuelven lo del usuario del token.
+
+```
+GET /replays?playlist=&result=&desde=&hasta=&limit=&offset=
+GET /replays/{id}
+GET /stats/summary?playlist=&desde=&hasta=
+GET /stats/trends?metric=bpm&interval=week&playlist=&desde=&hasta=
+```
+
+Decisiones que conviene conocer:
+
+- **`metric` e `interval` son listas cerradas.** El nombre de la columna llega del
+  cliente, así que se resuelve con un diccionario; aceptarlo tal cual sería una
+  inyección de SQL esperando a ocurrir. Un valor desconocido da 422.
+- **Los periodos sin datos se omiten**, no se rellenan con ceros: un 0 donde no se jugó
+  hace que la gráfica parezca una caída de rendimiento.
+- **`hasta=2026-05-01` incluye ese día entero**, no solo las 00:00.
+- **`win_rate` no cuenta los empates** como derrotas: se calcula sobre las partidas con
+  resultado claro.
+- **`GET /replays/{id}` devuelve solo tus estadísticas**, porque solo se guardan las
+  tuyas (ADR 0004).
+
+Rendimiento medido con 3000 partidas: el listado filtrado usa los índices y tarda menos
+de 1 ms; el resumen y las tendencias, ~1 y ~5 ms. Detalle en
+[`docs/rendimiento.md`](docs/rendimiento.md).
+
 ## Migraciones
 
 ```bash
@@ -246,6 +274,7 @@ Notas sobre los tests:
 |---|---|
 | [`Guia.md`](Guia.md) | Especificacion original, fases y decisiones abiertas |
 | [`docs/ballchasing-api.md`](docs/ballchasing-api.md) | La API de Ballchasing verificada con peticiones reales: filtros, paginacion y forma exacta de las estadisticas |
+| [`docs/rendimiento.md`](docs/rendimiento.md) | Planes de ejecucion y tamaño en disco con 3000 partidas |
 | [`docs/adr/`](docs/adr/) | Decisiones tecnicas con su contexto y sus consecuencias |
 
 ## Hosting previsto

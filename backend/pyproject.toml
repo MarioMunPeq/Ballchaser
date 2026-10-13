@@ -57,6 +57,11 @@ ignore = [
     "N818",
 ]
 
+[tool.ruff.lint.flake8-bugbear]
+# `Query(...)` en los parametros por defecto es el patron de FastAPI y no son
+# llamadas mutables: sin esto, B008 los marca como error.
+extend-immutable-calls = ["fastapi.Query", "fastapi.Path", "fastapi.Body", "fastapi.Depends"]
+
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S105", "S106", "S311", "ANN201", "ANN001"]
 

@@ -9,6 +9,7 @@ import tempfile
 from collections.abc import AsyncIterator, Iterator
 from contextlib import suppress
 from pathlib import Path
+from typing import Any
 
 import firebase_admin
 import pytest
@@ -16,7 +17,7 @@ from alembic import command
 from alembic.config import Config
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import delete, text
+from sqlalchemy import Engine, delete, event, text
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -75,15 +76,27 @@ async def engine() -> AsyncIterator[AsyncEngine]:
     limpio al terminar, para que el siguiente test no lo herede.
     """
     test_engine = create_async_engine(TEST_DATABASE_URL)
-    if TEST_DATABASE_URL.startswith("sqlite"):
-        # SQLite no aplica las claves foraneas por defecto. Sin esto, los tests
-        # darian verde con filas huerfanas que en Postgres (produccion) fallarian.
-        async with test_engine.begin() as conn:
-            await conn.exec_driver_sql("PRAGMA foreign_keys=ON")
     await _migrar(test_engine, "head")
     yield test_engine
     await _migrar(test_engine, "base")
     await test_engine.dispose()
+
+
+@event.listens_for(Engine, "connect")
+def _claves_foraneas_siempre(dbapi_connection: Any, record: Any) -> None:
+    """Activa las claves foraneas en SQLite, en todas las conexiones del pool.
+
+    SQLite las tiene desactivadas por defecto y el PRAGMA es por conexion: si solo se
+    activa en una, el resto del pool insertaria filas huerfanas que Postgres si
+    rechaza. Con `aiosqlite` lo que llega no es una `sqlite3.Connection` sino el
+    adaptador de SQLAlchemy, de ahi la comprobacion por modulo.
+    """
+    del record
+    if "sqlite" not in type(dbapi_connection).__module__:
+        return
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.close()
 
 
 async def _migrar(test_engine: AsyncEngine, revision: str) -> None:
