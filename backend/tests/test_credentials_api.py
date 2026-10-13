@@ -133,6 +133,24 @@ async def test_token_vacio_da_422(client: AsyncClient, ballchasing_acepta: respx
     assert response.status_code in (422, 401)
 
 
+async def test_sin_clave_no_gasta_cuota_de_ballchasing(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch, ballchasing_acepta: respx.Router
+) -> None:
+    """Sin clave de cifrado no se puede guardar nada, asi que no se llama a la API.
+
+    Una llamada de las 500/hora no debe gastarse en un intento que va a fallar.
+    """
+    monkeypatch.setattr(settings, "secret_encryption_key", None)
+
+    response = await client.put(
+        "/me/ballchasing-token", json={"token": TOKEN}, headers=bearer("token-alice")
+    )
+
+    assert response.status_code == 503
+    assert response.json()["error"]["code"] == "encryption_not_configured"
+    assert ballchasing_acepta.calls.call_count == 0
+
+
 async def test_get_estado_no_revela_el_token(
     client: AsyncClient, ballchasing_acepta: respx.Router
 ) -> None:

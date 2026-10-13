@@ -38,6 +38,16 @@ async def guardar_token(
     except ValueError as exc:
         raise AppError(status_code=422, code="invalid_token", message=str(exc)) from exc
 
+    # Se comprueba antes de llamar a Ballchasing: sin clave de cifrado no vamos a poder
+    # guardar el token, y validar contra la API externa gasta una de las 500 llamadas
+    # hourly del usuario sin ningun beneficio.
+    if not settings.secret_encryption_key:
+        raise AppError(
+            status_code=503,
+            code="encryption_not_configured",
+            message="El cifrado de secretos no esta configurado en el servidor.",
+        )
+
     await _validar_contra_ballchasing(limpio)
 
     cifrado = crypto.cifrar(limpio)

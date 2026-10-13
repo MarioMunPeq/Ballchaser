@@ -5,6 +5,12 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    # Las claves de desarrollo (SECRET_ENCRYPTION_KEY, el token de Ballchasing...)
+    # viven en backend/.env, que esta en .gitignore. Sin esto el contenedor arrancaria
+    # sin cifrado y `PUT /me/ballchasing-token` responderia 503.
+    # Lo de `environment` de abajo manda sobre lo que venga de aqui.
+    env_file:
+      - ./backend/.env
     environment:
       ENVIRONMENT: local
       LOG_LEVEL: INFO
