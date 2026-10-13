@@ -1,0 +1,39 @@
+name: ballchaser
+
+services:
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      ENVIRONMENT: local
+      LOG_LEVEL: INFO
+      LOG_JSON: "true"
+      DATABASE_URL: postgresql+psycopg://ballchaser:ballchaser@db:5432/ballchaser
+      CORS_ORIGINS: '["http://localhost:5173"]'
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ballchaser
+      POSTGRES_PASSWORD: ballchaser
+      POSTGRES_DB: ballchaser
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ballchaser -d ballchaser"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  pgdata:
