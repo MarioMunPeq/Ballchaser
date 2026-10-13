@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.pool import StaticPool
 
+from app.core.config import settings
 from app.core.security import get_identity_verifier
 from app.db.models import Base
 from app.db.session import get_session
@@ -31,13 +32,14 @@ TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL", "sqlite+aiosqlite:///:memory:
 
 
 @pytest.fixture(autouse=True)
-def _firebase_app_limpio() -> Iterator[None]:
-    """Deja firebase-admin sin app registrada.
+def _entorno_limpio(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """Cada test empieza sin configuracion heredada ni estado global de Firebase.
 
-    `initialize_app` guarda estado global y se niega a inicializar dos veces, asi
-    que sin este cleanup un test que carga credenciales haria que los siguientes
-    dieran por buena una configuracion que no es la suya.
+    Sin esto los tests dependen del `.env` del desarrollador: aqui pasarian y en
+    la maquina de al lado fallarian.
     """
+    monkeypatch.setattr(settings, "firebase_credentials_file", None)
+    monkeypatch.setattr(settings, "firebase_credentials_json", None)
     _borrar_app_firebase()
     yield
     _borrar_app_firebase()

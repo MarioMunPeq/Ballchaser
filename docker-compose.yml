@@ -11,6 +11,11 @@ services:
       LOG_JSON: "true"
       DATABASE_URL: postgresql+psycopg://ballchaser:ballchaser@db:5432/ballchaser
       CORS_ORIGINS: '["http://localhost:5173"]'
+      FIREBASE_CREDENTIALS_FILE: /run/secrets/firebase-service-account.json
+    volumes:
+      # Solo en local: la clave de servicio se monta, nunca se copia a la imagen.
+      # En Render se usa FIREBASE_CREDENTIALS_JSON como variable de entorno.
+      - ./backend/secrets:/run/secrets:ro
     ports:
       - "8000:8000"
     depends_on:
