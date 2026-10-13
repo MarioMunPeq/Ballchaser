@@ -75,6 +75,11 @@ async def engine() -> AsyncIterator[AsyncEngine]:
     limpio al terminar, para que el siguiente test no lo herede.
     """
     test_engine = create_async_engine(TEST_DATABASE_URL)
+    if TEST_DATABASE_URL.startswith("sqlite"):
+        # SQLite no aplica las claves foraneas por defecto. Sin esto, los tests
+        # darian verde con filas huerfanas que en Postgres (produccion) fallarian.
+        async with test_engine.begin() as conn:
+            await conn.exec_driver_sql("PRAGMA foreign_keys=ON")
     await _migrar(test_engine, "head")
     yield test_engine
     await _migrar(test_engine, "base")

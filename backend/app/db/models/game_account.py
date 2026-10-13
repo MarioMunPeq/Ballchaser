@@ -7,10 +7,11 @@ para saber a que jugador de cada replay pertenece su ficha.
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint, Uuid, func
+from sqlalchemy import ForeignKey, String, UniqueConstraint, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
+from app.db.types import UtcDateTime
 
 
 class GameAccount(Base):
@@ -30,7 +31,7 @@ class GameAccount(Base):
     platform_id: Mapped[str] = mapped_column(String(64), nullable=False)
     display_name: Mapped[str | None] = mapped_column(String(64))
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
+        UtcDateTime,
         default=lambda: datetime.now(UTC),
         server_default=func.current_timestamp(),
         nullable=False,

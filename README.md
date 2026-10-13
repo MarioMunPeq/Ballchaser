@@ -14,7 +14,7 @@ del repositorio.
 | 0 | Esqueleto: `pyproject`, ruff, pre-commit, FastAPI con `/health`, Dockerfile, docker-compose, CI | Hecho |
 | 1 | Firebase Auth, `users`, `GET /me`, `DELETE /me` | Hecho |
 | 2 | Cifrado del token de Ballchasing y `game_accounts` | Hecho |
-| 3 | Cliente Ballchasing, ingesta, cola `sync_jobs` y worker | Pendiente |
+| 3 | Cliente Ballchasing, ingesta, cola `sync_jobs` y worker | Hecho (falta el cron de GitHub Actions) |
 | 4 | API de estadisticas y tendencias | Pendiente |
 | 5 | Frontend React + Vite | Pendiente |
 | 6 | Observabilidad, Prometheus, README final, ADR | Pendiente |
@@ -169,6 +169,35 @@ del token, asi que no se le pide que lo cambie).
 Si se rota la clave, `key_version` guarda con que clave se cifro cada fila para poder
 descifrar las antiguas: se cambia `SECRET_ENCRYPTION_KEY` y se sube `SECRET_KEY_VERSION`,
 y las filas viejas siguen siendo legibles con la clave que les tocó.
+
+## Sincronizacion
+
+`POST /sync` no sincroniza: encola un trabajo en la tabla `sync_jobs` y responde
+`202`. El worker, que vive en el mismo proceso, lo coge y lo ejecuta.
+
+```
+POST /sync                encola (si ya hay uno pendiente, no encola otro)
+GET  /sync/status         estado del ultimo trabajo y progreso
+PATCH /me/sync-settings   activa o desactiva la sincronizacion automatica
+```
+
+Decisiones que importan al leer el codigo:
+
+- **Idempotente**: `replays.ballchasing_id` es la clave primaria y una partida ya
+  guardada se descarta *antes* de pedir su detalle. El worker puede morir y repetirse
+  sin duplicar nada ni gastar cuota.
+- **Una partida por transacción** (con *savepoint*): una partida imposible no tira el lote.
+- **`status` distinto de `ok`** no se guarda: ni se marca como vista, para que la
+  siguiente pasada vuelva a mirarla.
+- **Un 429 no es un fallo**: el trabajo vuelve a la cola con espera creciente. Es cuota
+  de Ballchasing, no un error del usuario.
+- **Recorrido acotado**: para tras dos páginas seguidas sin nada nuevo. El listado viene
+  de más reciente a más antiguo, así que seguir más allá solo es gastar cuota.
+- **Trabajos a medias se recuperan**: si el proceso muere, un barrido devuelve a la cola
+  los que llevan más de 30 minutos en `running`.
+
+`DELETE /me` borra también las estadísticas del jugador y las partidas que se quedan sin
+referencia: son datos personales de una cuenta que ya no existe.
 
 ## Migraciones
 

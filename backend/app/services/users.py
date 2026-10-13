@@ -13,6 +13,7 @@ from app.core.security import Identity
 from app.db.models.credential import BallchasingCredential
 from app.db.models.game_account import GameAccount
 from app.db.models.user import User
+from app.services import purge
 
 
 async def get_or_create_user(session: AsyncSession, identity: Identity) -> tuple[User, bool]:
@@ -55,6 +56,9 @@ async def delete_user(session: AsyncSession, user: User) -> None:
     Solo se admite el `user_id` que viene de la identidad del token, nunca uno
     recibido en el cuerpo de la peticion.
     """
+    # La purga va primero: necesita las cuentas de juego para saber que estadisticas
+    # eran del usuario, y `DELETE /me` las borra justo despues.
+    await purge.borrar_datos_de_juego(session, user.id)
     await session.execute(
         delete(BallchasingCredential).where(BallchasingCredential.user_id == user.id)
     )

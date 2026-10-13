@@ -62,6 +62,11 @@ class Settings(BaseSettings):
     # Fase 6: exposition de métricas Prometheus (protegida).
     metrics_token: str | None = Field(default=None, alias="METRICS_TOKEN")
 
+    # Fase 3: worker de sincronizacion dentro del propio proceso. Se puede apagar
+    # para separar la API del trabajo (y en los tests, que lo controlan a mano).
+    worker_enabled: bool = Field(default=True, alias="WORKER_ENABLED")
+    worker_poll_seconds: float = Field(default=5.0, alias="WORKER_POLL_SECONDS")
+
 
 @lru_cache
 def get_settings() -> Settings:

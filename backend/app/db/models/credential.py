@@ -8,10 +8,11 @@ que corresponda a esa version.
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Uuid, func
+from sqlalchemy import ForeignKey, Integer, String, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
+from app.db.types import UtcDateTime
 
 
 class BallchasingCredential(Base):
@@ -24,12 +25,12 @@ class BallchasingCredential(Base):
     )
     token_encrypted: Mapped[str] = mapped_column(String(512), nullable=False)
     key_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
-    last_validated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_validated_at: Mapped[datetime | None] = mapped_column(UtcDateTime)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
+        UtcDateTime, default=lambda: datetime.now(UTC), nullable=False
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
+        UtcDateTime,
         default=lambda: datetime.now(UTC),
         server_default=func.current_timestamp(),
         onupdate=lambda: datetime.now(UTC),

@@ -15,6 +15,8 @@ from app.core.asyncio_setup import ensure_compatible_event_loop
 from app.core.config import settings
 from app.core.errors import register_exception_handlers
 from app.core.logging import configure_logging
+from app.db.session import SessionLocal
+from app.worker.worker import Worker
 
 configure_logging()
 ensure_compatible_event_loop()
@@ -24,8 +26,18 @@ logger = structlog.get_logger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     logger.info("app.startup", environment=settings.environment, version=__version__)
-    yield
-    logger.info("app.shutdown")
+    worker: Worker | None = None
+    if settings.worker_enabled:
+        # El worker vive en el mismo proceso que la API: una sola instancia, una sola
+        # cola. En los tests no se arranca, se ejecuta paso a paso.
+        worker = Worker(SessionLocal)
+        worker.arrancar()
+    try:
+        yield
+    finally:
+        if worker is not None:
+            await worker.parar()
+        logger.info("app.shutdown")
 
 
 def create_app() -> FastAPI:
