@@ -139,7 +139,7 @@ async def borrar_credencial(session: AsyncSession, user_id: uuid.UUID) -> bool:
         delete(BallchasingCredential).where(BallchasingCredential.user_id == user_id)
     )
     await session.commit()
-    return bool(resultado.rowcount)
+    return bool(resultado.rowcount)  # type: ignore[attr-defined]
 
 
 async def marcar_como_validada(session: AsyncSession, user_id: uuid.UUID) -> None:

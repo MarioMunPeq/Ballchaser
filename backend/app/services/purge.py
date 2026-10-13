@@ -41,7 +41,7 @@ async def borrar_datos_de_juego(session: AsyncSession, user_id: uuid.UUID) -> di
                 tuple_(PlayerStat.platform, PlayerStat.platform_id).in_(identidades)
             )
         )
-        stats_borradas = resultado.rowcount or 0
+        stats_borradas = resultado.rowcount or 0  # type: ignore[attr-defined]
 
     # Los vinculos con partidas se van antes de comprobar que partidas sobran.
     await session.execute(delete(UserReplay).where(UserReplay.user_id == user_id))
@@ -50,7 +50,7 @@ async def borrar_datos_de_juego(session: AsyncSession, user_id: uuid.UUID) -> di
     resultado = await session.execute(
         delete(Replay).where(Replay.ballchasing_id.not_in(select(UserReplay.replay_id)))
     )
-    replays_borrados = resultado.rowcount or 0
+    replays_borrados = resultado.rowcount or 0  # type: ignore[attr-defined]
 
     await session.commit()
     return {

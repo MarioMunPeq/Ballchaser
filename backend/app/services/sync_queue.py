@@ -111,7 +111,7 @@ async def devolver_abandonados(session: AsyncSession) -> int:
         .values(status=EstadoJob.QUEUED.value, run_after=datetime.now(UTC))
     )
     await session.commit()
-    devueltos = resultado.rowcount or 0
+    devueltos = resultado.rowcount or 0  # type: ignore[attr-defined]
     if devueltos:
         logger.warning("sync.trabajos_devueltos", cantidad=devueltos)
     return devueltos
