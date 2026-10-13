@@ -10,7 +10,13 @@ from collections.abc import AsyncIterator
 import pytest
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy import delete, text
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 from sqlalchemy.pool import StaticPool
 
 from app.core.security import get_identity_verifier
@@ -28,7 +34,7 @@ def anyio_backend() -> str:
 
 
 @pytest.fixture
-async def engine() -> AsyncIterator[object]:
+async def engine() -> AsyncIterator[AsyncEngine]:
     """Motor de prueba con las tablas creadas."""
     kwargs: dict[str, object] = {}
     if TEST_DATABASE_URL.startswith("sqlite"):
@@ -43,11 +49,28 @@ async def engine() -> AsyncIterator[object]:
 
 
 @pytest.fixture
-async def session(engine: object) -> AsyncIterator[AsyncSession]:
-    """Sesion de base de datos compartida por el test."""
+async def session(engine: AsyncEngine) -> AsyncIterator[AsyncSession]:
+    """Sesion de base de datos compartida por el test, sobre datos limpios."""
     factory = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
     async with factory() as db_session:
         yield db_session
+    await _truncate_all(engine)
+
+
+async def _truncate_all(engine: AsyncEngine) -> None:
+    """Deja la base de datos como estaba antes del test.
+
+    Imprescindible con Postgres: los datos sobreviven entre tests (y entre
+    ejecuciones), mientras que SQLite en memoria arranca de cero cada vez. Sin
+    esto los tests dependen del orden y fallan por filas de otros tests.
+    """
+    async with engine.begin() as conn:
+        if engine.dialect.name == "sqlite":
+            for table in reversed(Base.metadata.sorted_tables):
+                await conn.execute(delete(table))
+            return
+        tablas = ", ".join(t.name for t in reversed(Base.metadata.sorted_tables))
+        await conn.execute(text(f"TRUNCATE {tablas} RESTART IDENTITY CASCADE"))
 
 
 @pytest.fixture

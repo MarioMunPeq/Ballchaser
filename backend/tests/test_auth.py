@@ -1,11 +1,12 @@
 """Tests de la verificacion de ID tokens."""
 
 import pytest
+from fastapi import FastAPI
 from httpx import AsyncClient
 
 from app.core.config import settings
 from app.core.errors import AppError
-from app.core.security import _init_firebase_app
+from app.core.security import _init_firebase_app, get_identity_verifier
 from tests.fakes import bearer
 
 
@@ -58,6 +59,30 @@ async def test_sin_credenciales_de_firebase_el_servidor_falla_cerrado(
 
     assert excinfo.value.status_code == 503
     assert excinfo.value.code == "auth_not_configured"
+
+
+async def test_sin_configuracion_una_peticion_sin_token_sigue_dando_401(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """El 401 va antes que el 503: primero se exige el token, luego se verifica."""
+    monkeypatch.setattr(settings, "firebase_credentials_json", None)
+
+    response = await client.get("/me")
+
+    assert response.status_code == 401
+
+
+async def test_sin_configuracion_un_token_presenta_da_503(
+    client: AsyncClient, app: FastAPI, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Con un token en mano pero sin credenciales, el error es de configuracion."""
+    monkeypatch.setattr(settings, "firebase_credentials_json", None)
+    app.dependency_overrides.pop(get_identity_verifier, None)
+
+    response = await client.get("/me", headers=bearer("token-alice"))
+
+    assert response.status_code == 503
+    assert response.json()["error"]["code"] == "auth_not_configured"
 
 
 async def test_credenciales_de_firebase_invalidas_fallan(

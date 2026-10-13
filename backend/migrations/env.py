@@ -11,8 +11,11 @@ from alembic import context
 from sqlalchemy.ext.asyncio import async_engine_from_config
 from sqlalchemy.pool import NullPool
 
+from app.core.asyncio_setup import ensure_compatible_event_loop
 from app.core.config import settings
 from app.db.models import Base
+
+ensure_compatible_event_loop()
 
 config = context.config
 

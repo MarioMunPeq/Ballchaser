@@ -11,11 +11,13 @@ from starlette.middleware.base import RequestResponseEndpoint
 
 from app import __version__
 from app.api.router import api_router
+from app.core.asyncio_setup import ensure_compatible_event_loop
 from app.core.config import settings
 from app.core.errors import register_exception_handlers
 from app.core.logging import configure_logging
 
 configure_logging()
+ensure_compatible_event_loop()
 logger = structlog.get_logger(__name__)
 
 

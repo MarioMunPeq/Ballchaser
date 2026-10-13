@@ -126,9 +126,25 @@ pre-commit install                     # hooks en el commit
 Notas sobre los tests:
 
 - Usan **SQLite en memoria**, asi que no necesitan Docker. Para correrlos contra Postgres:
-  `TEST_DATABASE_URL=postgresql+psycopg://ballchaser:ballchaser@localhost:5432/ballchaser pytest`.
+  `docker compose exec db psql -U ballchaser -d postgres -c "CREATE DATABASE ballchaser_test"` y
+  despues `TEST_DATABASE_URL=postgresql+psycopg://ballchaser:ballchaser@localhost:5432/ballchaser_test pytest`.
 - Firebase se sustituye por un verificador falso: los tests de auth comprueban que un token
   invalido no pasa, sin tocar la red.
+- Entre tests se limpia la base de datos (`TRUNCATE` en Postgres). Sin eso cada test ve las
+  filas del anterior y los resultados dependen del orden de ejecucion.
+- En Windows, psycopg necesita el event loop `Selector` y no el `Proactor` de por defecto.
+  El proyecto lo fuerza en `app/core/asyncio_setup.py`, para que `alembic` y `uvicorn` se
+  comporten igual que en Linux.
+
+## CI
+
+`.github/workflows/ci.yml` define tres jobs:
+
+| Job | Que comprueba |
+|---|---|
+| `backend` | ruff, mypy, tests con cobertura, `pip-audit` y el SQL de las migraciones |
+| `backend-postgres` | los mismos tests contra un Postgres real, mas el ciclo `upgrade / downgrade / upgrade` de Alembic |
+| `docker` | construye la imagen del backend |
 
 ## Hosting previsto
 

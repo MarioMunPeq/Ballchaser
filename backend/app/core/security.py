@@ -100,9 +100,23 @@ def _cached_verifier() -> FirebaseIdentityVerifier:
     return FirebaseIdentityVerifier(firebase_auth.Client(_init_firebase_app()))
 
 
-def get_identity_verifier() -> FirebaseIdentityVerifier:
+class LazyFirebaseIdentityVerifier:
+    """Conecta con Firebase la primera vez que se verifica un token.
+
+    Devolver una instancia perezosa en vez de el verificador ya construido
+    importa: FastAPI resuelve las dependencias antes de ejecutar el endpoint, y
+    si aqui fallara por falta de credenciales, una peticion sin token responderia
+    503 en lugar del 401 que corresponde. Asi el 503 sale solo cuando hay un token
+    que de verdad hay que verificar.
+    """
+
+    def verify(self, id_token: str) -> Identity:
+        return _cached_verifier().verify(id_token)
+
+
+def get_identity_verifier() -> LazyFirebaseIdentityVerifier:
     """Dependencia que expone el verificador de identidad."""
-    return _cached_verifier()
+    return LazyFirebaseIdentityVerifier()
 
 
 bearer_scheme = HTTPBearer(auto_error=False, description="ID token de Firebase")
@@ -110,9 +124,12 @@ bearer_scheme = HTTPBearer(auto_error=False, description="ID token de Firebase")
 
 async def get_current_identity(
     bearer: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)],
-    verifier: Annotated[FirebaseIdentityVerifier, Depends(get_identity_verifier)],
+    verifier: Annotated[IdentityVerifier, Depends(get_identity_verifier)],
 ) -> Identity:
-    """Exige un ID token valido y devuelve la identidad correspondiente."""
+    """Exige un ID token valido y devuelve la identidad correspondiente.
+
+    El usuario sale siempre del token, nunca del cuerpo de la peticion.
+    """
     if bearer is None or bearer.scheme.lower() != "bearer":
         raise unauthorized()
 
