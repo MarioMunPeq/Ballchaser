@@ -1,6 +1,11 @@
 import { useState } from "react";
 
-import { useCuentas, useEstadoSync, useEstadoToken, useSesion } from "../hooks/useApi";
+import {
+  useSesion,
+  useEstadoToken,
+  useEstadoSync,
+  useCuentas,
+} from "../hooks/useApi";
 import { api, ErrorApi, type GameAccount } from "../lib/api";
 import { haceCuanto } from "../lib/format";
 
@@ -17,6 +22,34 @@ export function PaginaAjustes() {
   const [plataforma, setPlataforma] = useState("steam");
   const [identificador, setIdentificador] = useState("");
   const [nombre, setNombre] = useState("");
+
+  // --- obtener SteamID64 desde nombre vanity ---
+  const [obteniendoSteamId, setObteniendoSteamId] = useState(false);
+  const [vanityInput, setVanityInput] = useState("");
+  const [steamIdEncontrado, setSteamIdEncontrado] = useState<string | null>(null);
+
+  async function obtenerSteamId64() {
+    if (!vanityInput.trim()) return;
+    setObteniendoSteamId(true);
+    setSteamIdEncontrado(null);
+    try {
+      const resp = await fetch(
+        `https://steamcommunity.com/id/${encodeURIComponent(vanityInput.trim())}/?xml=1`
+      );
+      if (!resp.ok) throw new Error("No se pudo obtener el perfil");
+      const xml = await resp.text();
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(xml, "text/xml");
+      const steamId = doc.querySelector("steamID64")?.textContent;
+      if (!steamId) throw new Error("No se encontró steamID64 en el XML");
+      setSteamIdEncontrado(steamId);
+      setIdentificador(steamId);
+    } catch (e) {
+      setAviso(e instanceof Error ? e.message : "No se pudo obtener el SteamID64");
+    } finally {
+      setObteniendoSteamId(false);
+    }
+  }
 
   async function guardarToken(evento: React.FormEvent) {
     evento.preventDefault();
@@ -39,13 +72,17 @@ export function PaginaAjustes() {
     setOcupado(true);
     setAviso(null);
     try {
-      await api.crearCuenta({ platform: plataforma, platform_id: identificador, display_name: nombre || null });
+      await api.crearCuenta({
+        platform: plataforma,
+        platform_id: identificador,
+        display_name: nombre || null,
+      });
       setIdentificador("");
       setNombre("");
       cuentas.recargar();
-      setAviso("Cuenta de juego anadida.");
+      setAviso("Cuenta de juego añadida.");
     } catch (e) {
-      setAviso(e instanceof ErrorApi ? e.message : "No se ha podido anadir la cuenta.");
+      setAviso(e instanceof ErrorApi ? e.message : "No se ha podido añadir la cuenta.");
     } finally {
       setOcupado(false);
     }
@@ -65,7 +102,7 @@ export function PaginaAjustes() {
         <p className={conCredencial ? "estado ok" : "estado pendiente"}>
           {conCredencial
             ? `Configurado${token.datos?.validated ? " y validado" : ""} · comprobado ${haceCuanto(token.datos?.last_validated_at ?? null)}`
-            : "Sin token: todavia no se puede sincronizar nada."}
+            : "Sin token: todavía no se puede sincronizar nada."}
         </p>
 
         <form onSubmit={guardarToken}>
@@ -136,36 +173,55 @@ export function PaginaAjustes() {
           </select>
 
           <label htmlFor="identificador">Identificador</label>
-          <input
-            id="identificador"
-            value={identificador}
-            onChange={(e) => setIdentificador(e.target.value)}
-            placeholder="76561198079124122"
-            required
-          />
-          {/* El nombre bonito de Steam no vale: el filtro de Ballchasing solo
-              acepta el identificador numerico. */}
-          <p className="nota">
-            En Steam es el <strong>número de 17 dígitos</strong>, no el nombre del perfil.
-            Lo tienes en la URL:{" "}
-            <span className="mono">steamcommunity.com/profiles/76561198079124122</span>
-            . Si tu URL es <span className="mono">/id/Tunombre</span>, cambia a
-            <span className="mono">/profiles/</span> para ver el número.
-          </p>
-          <a
-            href="https://steamcommunity.com/my/profile"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="boton-secundario"
-          >
-            Abrir mi perfil de Steam
-          </a>
+          <div className="campo-con-ayuda">
+            <input
+              id="identificador"
+              value={identificador}
+              onChange={(e) => setIdentificador(e.target.value)}
+              placeholder="76561199000000001"
+              required
+            />
+            {plataforma === "steam" && (
+              <div className="ayuda-steam">
+                <label htmlFor="vanity">
+                  <input
+                    id="vanity"
+                    type="text"
+                    value={vanityInput}
+                    onChange={(e) => setVanityInput(e.target.value)}
+                    placeholder="Tu nombre en Steam (ej: Snakeyesmp)"
+                    aria-label="Tu nombre en Steam (ej: Snakeyesmp)"
+                  />
+                </label>
+                <button
+                  type="button"
+                  className="secundario"
+                  disabled={obteniendoSteamId || !vanityInput.trim()}
+                  onClick={obtenerSteamId64}
+                >
+                  {obteniendoSteamId ? "Obteniendo…" : "Obtener mi SteamID64"}
+                </button>
+                {steamIdEncontrado && (
+                  <p className="exito">
+                    ¡Encontrado! SteamID64: <strong>{steamIdEncontrado}</strong>
+                    <button
+                      type="button"
+                      className="secundario pequeño"
+                      onClick={() => { setIdentificador(steamIdEncontrado); setSteamIdEncontrado(null); }}
+                    >
+                      Usar este
+                    </button>
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
 
           <label htmlFor="nombre">Nombre en el juego (opcional)</label>
           <input id="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} />
 
           <button type="submit" disabled={ocupado}>
-            Anadir cuenta
+            Añadir cuenta
           </button>
         </form>
       </section>
@@ -224,4 +280,3 @@ export function PaginaAjustes() {
     </div>
   );
 }
-
