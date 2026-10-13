@@ -102,7 +102,7 @@ export function PaginaAjustes() {
         <h2>Cuentas de juego</h2>
         <p className="nota">
           Con la cuenta de juego es como se sabe que replays son tuyos, aunque los subiera
-          otra persona. El identificador va en la URL de tu perfil de Steam.
+          otra persona.
         </p>
 
         <ul className="lista-cuentas">
@@ -143,6 +143,15 @@ export function PaginaAjustes() {
             placeholder="76561198079124122"
             required
           />
+          {/* El nombre bonito de Steam no vale: el filtro de Ballchasing solo
+              acepta el identificador numerico. */}
+          <p className="nota">
+            En Steam es el <strong>número de 17 dígitos</strong>, no el nombre del perfil.
+            Lo tienes en la URL:{" "}
+            <span className="mono">steamcommunity.com/profiles/76561198079124122</span>
+            . Si tu URL es <span className="mono">/id/Tunombre</span>, cambia a
+            <span className="mono">/profiles/</span> para ver el número.
+          </p>
 
           <label htmlFor="nombre">Nombre en el juego (opcional)</label>
           <input id="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} />

@@ -22,6 +22,27 @@ async def listar(session: AsyncSession, user_id: uuid.UUID) -> list[GameAccount]
     return list(resultado.scalars())
 
 
+def _validar_identificador(platform: str, platform_id: str) -> None:
+    """Comprueba que el identificador tiene la forma que espera cada plataforma.
+
+    El caso que de verdad importa es Steam: su URL admite tanto el nombre "bonito"
+    (`steamcommunity.com/id/Snakeyesmp`) como el numerico
+    (`/profiles/76561198079124122`), pero Ballchasing **solo acepta el numerico**.
+    Con el nombre, el filtro `player-id` no devuelve nada y el usuario ve cero
+    partidas sin entender por que.
+    """
+    if platform == "steam" and not (platform_id.isdigit() and len(platform_id) == 17):
+        raise AppError(
+            status_code=422,
+            code="invalid_steam_id",
+            message=(
+                "En Steam hace falta el identificador numerico de 17 digitos "
+                "(76561198079124122), no el nombre del perfil. Lo tienes en la URL "
+                "de steamcommunity.com/profiles/TU_ID."
+            ),
+        )
+
+
 async def crear(
     session: AsyncSession,
     user_id: uuid.UUID,
@@ -43,6 +64,8 @@ async def crear(
             code="invalid_game_account",
             message="Plataforma e identificador son obligatorios.",
         )
+
+    _validar_identificador(platform, platform_id)
 
     existente = await session.scalar(
         select(GameAccount).where(

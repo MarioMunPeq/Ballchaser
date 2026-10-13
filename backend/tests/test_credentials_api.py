@@ -286,7 +286,7 @@ async def test_crear_cuenta_de_juego(client: AsyncClient) -> None:
 
 
 async def test_crear_la_misma_identidad_no_duplica(client: AsyncClient) -> None:
-    datos = {"platform": "steam", "platform_id": "123", "display_name": "Viejo"}
+    datos = {"platform": "steam", "platform_id": "76561198079124199", "display_name": "Viejo"}
     await client.post("/me/game-accounts", json=datos, headers=bearer("token-alice"))
 
     segundo = await client.post(
@@ -309,7 +309,7 @@ async def test_listar_cuentas_vacio(client: AsyncClient) -> None:
 async def test_cada_usuario_solo_ve_sus_cuentas(client: AsyncClient) -> None:
     await client.post(
         "/me/game-accounts",
-        json={"platform": "steam", "platform_id": "111"},
+        json={"platform": "steam", "platform_id": "76561198079124111"},
         headers=bearer("token-alice"),
     )
 
@@ -323,7 +323,7 @@ async def test_no_se_puede_borrar_una_cuenta_ajena(
 ) -> None:
     creada = await client.post(
         "/me/game-accounts",
-        json={"platform": "steam", "platform_id": "111"},
+        json={"platform": "steam", "platform_id": "76561198079124111"},
         headers=bearer("token-alice"),
     )
     id_alice = creada.json()["id"]
@@ -355,12 +355,58 @@ async def test_cuenta_sin_identificadores_da_422(client: AsyncClient) -> None:
     assert response.status_code == 422
 
 
+async def test_el_nombre_bonito_de_steam_se_rechaza(client: AsyncClient) -> None:
+    """Con el vanity name el filtro player-id no devuelve nada y no se explica por que."""
+    response = await client.post(
+        "/me/game-accounts",
+        json={"platform": "steam", "platform_id": "Snakeyesmp"},
+        headers=bearer("token-alice"),
+    )
+
+    assert response.status_code == 422
+    cuerpo = response.json()
+    assert cuerpo["error"]["code"] == "invalid_steam_id"
+    assert "17" in cuerpo["error"]["message"]
+
+
+@pytest.mark.parametrize("platform_id", ["76561198", "7656119807912412212345", "abcdefghijklmnopq"])
+async def test_steam_exige_17_digitos(client: AsyncClient, platform_id: str) -> None:
+    response = await client.post(
+        "/me/game-accounts",
+        json={"platform": "steam", "platform_id": platform_id},
+        headers=bearer("token-alice"),
+    )
+
+    assert response.status_code == 422
+
+
+async def test_el_steam_id_numerico_se_acepta(client: AsyncClient) -> None:
+    response = await client.post(
+        "/me/game-accounts",
+        json={"platform": "steam", "platform_id": "76561198079124122"},
+        headers=bearer("token-alice"),
+    )
+
+    assert response.status_code == 201
+
+
+async def test_otras_plataformas_admiten_identificadores_no_numericos(client: AsyncClient) -> None:
+    """En Epic o PlayStation el identificador no es un numero."""
+    response = await client.post(
+        "/me/game-accounts",
+        json={"platform": "ps4", "platform_id": "gamertag"},
+        headers=bearer("token-alice"),
+    )
+
+    assert response.status_code == 201
+
+
 async def test_borrar_usuario_borra_sus_cuentas_de_juego(
     client: AsyncClient, session: AsyncSession
 ) -> None:
     await client.post(
         "/me/game-accounts",
-        json={"platform": "steam", "platform_id": "111"},
+        json={"platform": "steam", "platform_id": "76561198079124111"},
         headers=bearer("token-alice"),
     )
 
