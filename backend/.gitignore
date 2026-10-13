@@ -1,0 +1,12 @@
+# credenciales: NO SUBIR NUNCA A GIT.
+#
+# Descarga aqui la clave de servicio de Firebase
+# (Project settings > Service accounts > Generate new private key), renombrala a
+# firebase-service-account.json y anade esta linea a tu .env (no a este fichero):
+#
+#   FIREBASE_CREDENTIALS_FILE=secrets/firebase-service-account.json
+
+secrets/
+*.pem
+*service-account*.json
+*serviceAccount*.json

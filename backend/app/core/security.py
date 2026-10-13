@@ -8,7 +8,8 @@ identidad; las contrasenas nunca pasan por este servicio.
 import json
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import Annotated, Protocol
+from pathlib import Path
+from typing import Annotated, Any, Protocol
 
 import firebase_admin
 import structlog
@@ -67,6 +68,30 @@ class FirebaseIdentityVerifier:
         )
 
 
+def _load_credentials() -> dict[str, Any] | None:
+    """Lee las credenciales de Firebase desde un fichero o desde una variable.
+
+    Se prefiere el fichero: el JSON de la clave de servicio es largo y tiene saltos
+    de linea, que en una variable de entorno hay que meter en una sola linea.
+    """
+    if settings.firebase_credentials_file:
+        path = Path(settings.firebase_credentials_file)
+        if not path.is_file():
+            logger.error("auth.credentials_file_missing", path=str(path))
+            raise AppError(
+                status_code=503,
+                code="auth_not_configured",
+                message="La autenticacion no esta configurada en el servidor.",
+            )
+        return json.loads(path.read_text(encoding="utf-8"))
+
+    raw = settings.firebase_credentials_json
+    if not raw:
+        return None
+
+    return json.loads(raw)
+
+
 def _init_firebase_app() -> firebase_admin.App:
     """Crea (o recupera) la app de firebase-admin a partir de la configuracion."""
     try:
@@ -74,8 +99,17 @@ def _init_firebase_app() -> firebase_admin.App:
     except ValueError:
         pass
 
-    raw = settings.firebase_credentials_json
-    if not raw:
+    try:
+        parsed = _load_credentials()
+    except json.JSONDecodeError as exc:
+        logger.error("auth.credentials_invalid_json")
+        raise AppError(
+            status_code=503,
+            code="auth_not_configured",
+            message="Las credenciales de Firebase no son un JSON valido.",
+        ) from exc
+
+    if parsed is None:
         raise AppError(
             status_code=503,
             code="auth_not_configured",
@@ -83,15 +117,16 @@ def _init_firebase_app() -> firebase_admin.App:
         )
 
     try:
-        parsed = json.loads(raw)
-    except json.JSONDecodeError as exc:
+        return firebase_admin.initialize_app(credentials.Certificate(parsed))
+    except ValueError as exc:
+        # Credenciales presentes pero inservibles (PEM corrupto, campos que faltan).
+        # Es un problema de despliegue, no del cliente que pregunta.
+        logger.error("auth.credentials_rejected", reason=str(exc))
         raise AppError(
             status_code=503,
             code="auth_not_configured",
-            message="FIREBASE_CREDENTIALS_JSON no es un JSON valido.",
+            message="Las credenciales de Firebase no son validas.",
         ) from exc
-
-    return firebase_admin.initialize_app(credentials.Certificate(parsed))
 
 
 @lru_cache

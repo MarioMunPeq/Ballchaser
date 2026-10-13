@@ -5,8 +5,10 @@ de pruebas corre contra Postgres definiendo `TEST_DATABASE_URL`.
 """
 
 import os
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Iterator
+from contextlib import suppress
 
+import firebase_admin
 import pytest
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
@@ -26,6 +28,25 @@ from app.main import create_app
 from tests.fakes import FakeIdentityVerifier
 
 TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+
+
+@pytest.fixture(autouse=True)
+def _firebase_app_limpio() -> Iterator[None]:
+    """Deja firebase-admin sin app registrada.
+
+    `initialize_app` guarda estado global y se niega a inicializar dos veces, asi
+    que sin este cleanup un test que carga credenciales haria que los siguientes
+    dieran por buena una configuracion que no es la suya.
+    """
+    _borrar_app_firebase()
+    yield
+    _borrar_app_firebase()
+
+
+def _borrar_app_firebase() -> None:
+    # Sin app registrada, `get_app` lanza ValueError y no hay nada que limpiar.
+    with suppress(ValueError):
+        firebase_admin.delete_app(firebase_admin.get_app())
 
 
 @pytest.fixture

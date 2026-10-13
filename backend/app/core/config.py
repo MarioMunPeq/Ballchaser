@@ -32,6 +32,10 @@ class Settings(BaseSettings):
     cors_origins: list[str] = Field(default_factory=list, alias="CORS_ORIGINS")
 
     # Fase 1: verificación de ID tokens de Firebase.
+    # Se prefiere el fichero (la clave de servicio que descargas de la consola)
+    # porque el JSON es multilínea y en una variable de entorno hay que escaparlo
+    # entero en una sola línea.
+    firebase_credentials_file: str | None = Field(default=None, alias="FIREBASE_CREDENTIALS_FILE")
     firebase_credentials_json: str | None = Field(default=None, alias="FIREBASE_CREDENTIALS_JSON")
 
     # Fase 2: cifrado del token de Ballchasing (clave base64 de 32 bytes).

@@ -95,15 +95,28 @@ curl http://localhost:8000/health
 
 ### 4. Firebase
 
-1. Crear el proyecto en <https://console.firebase.google.com> (plan Spark).
+1. Crear el proyecto en <https://console.firebase.google.com> (plan **Spark**, sin
+   facturacion) llamado `ballchaser`.
 2. En *Authentication → Sign-in method*, activar **Email/Password** y **Google**.
-3. En *Project settings → Service accounts*, generar una clave privada y meter el JSON en
-   la variable `FIREBASE_CREDENTIALS_JSON` (en Render, como variable de entorno).
-4. El frontend hara `signInWithEmailAndPassword` o `signInWithPopup` y enviara
+3. En *Project settings → Service accounts*, pulsar **Generate new private key**. Se descarga
+   un JSON.
+4. Mover ese JSON a `backend/secrets/firebase-service-account.json` (la carpeta `secrets/`
+   esta en `.gitignore`) y anadir a `backend/.env`:
+   ```
+   FIREBASE_CREDENTIALS_FILE=secrets/firebase-service-account.json
+   ```
+   En Render, la variable de entorno `FIREBASE_CREDENTIALS_JSON` con el JSON entero, en una
+   sola linea.
+5. Comprobar: `curl -H "Authorization: Bearer cualquier-cosa" http://localhost:8000/me`
+   debe devolver **401** (credenciales cargadas, token falso) y no 503.
+6. El frontend (fase 5) hara `signInWithEmailAndPassword` o `signInWithPopup` y enviara
    `getIdToken()` en la cabecera `Authorization: Bearer`.
 
-Sin esas credenciales, las rutas `/me` responden 503 `auth_not_configured` y las demas
-siguen funcionando: es deliberado, fallar cerrado.
+Sin esas credenciales, las rutas `/me` devuelven 503 `auth_not_configured` y las demas siguen
+funcionando: es deliberado, fallar cerrado.
+
+**Ese JSON es una llave que da acceso a todos los usuarios del proyecto.** Si se filtra,
+borralo en *Project settings → Service accounts* y genera otra. Nunca lo subas a Git.
 
 ## Migraciones
 
