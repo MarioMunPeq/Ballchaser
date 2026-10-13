@@ -118,6 +118,35 @@ funcionando: es deliberado, fallar cerrado.
 **Ese JSON es una llave que da acceso a todos los usuarios del proyecto.** Si se filtra,
 borralo en *Project settings → Service accounts* y genera otra. Nunca lo subas a Git.
 
+## Credenciales de Ballchasing
+
+Cada usuario guarda su propio token, cifrado con AES-GCM. La clave es una variable de
+entorno; generarla con:
+
+```bash
+cd backend
+python -c "from app.core.crypto import generar_clave; print(generar_clave())"
+```
+
+y escribirla en `.env` como `SECRET_ENCRYPTION_KEY=...`.
+
+| Endpoint | Que hace |
+|---|---|
+| `PUT /me/ballchasing-token` | Valida el token contra Ballchasing y lo guarda cifrado |
+| `GET /me/ballchasing-token` | Estado (configurado, validado, fecha). **Nunca el token** |
+| `DELETE /me/ballchasing-token` | Lo borra |
+| `GET /me/game-accounts` | Cuentas de juego del usuario |
+| `POST /me/game-accounts` | Anade una (platform, platform_id, display_name) |
+| `DELETE /me/game-accounts/{id}` | Borra una propia |
+
+Distincion de errores importante: un **401** significa que Ballchasing no reconoce el
+token (error del usuario) y un **502** que Ballchasing no esta disponible (no es culpa
+del token, asi que no se le pide que lo cambie).
+
+Si se rota la clave, `key_version` guarda con que clave se cifro cada fila para poder
+descifrar las antiguas: se cambia `SECRET_ENCRYPTION_KEY` y se sube `SECRET_KEY_VERSION`,
+y las filas viejas siguen siendo legibles con la clave que les tocó.
+
 ## Migraciones
 
 ```bash

@@ -28,7 +28,7 @@ Que se gana, que se pierde y que queda fuera.
 ## Decisiones
 
 1. [0001. Firebase Authentication para la identidad](0001-firebase-para-identidad.md) — Aceptada.
-2. Cola en Postgres en vez de Redis.
+2. [0002. Cola en Postgres en vez de Redis](0002-cola-en-postgres.md) — Aceptada.
 3. Token de Ballchasing por usuario.
 4. Guardar solo metricas seleccionadas.
 5. Neon + Render como hosting gratuito.

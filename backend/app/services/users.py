@@ -10,6 +10,8 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import Identity
+from app.db.models.credential import BallchasingCredential
+from app.db.models.game_account import GameAccount
 from app.db.models.user import User
 
 
@@ -44,10 +46,18 @@ async def get_or_create_user(session: AsyncSession, identity: Identity) -> tuple
 
 
 async def delete_user(session: AsyncSession, user: User) -> None:
-    """Borra la cuenta y sus datos asociados.
+    """Borra la cuenta y todos sus datos: credenciales, cuentas de juego y, mas
+    adelante, replays y trabajos de sincronizacion.
+
+    Se borra a mano en vez de confiar en `ON DELETE CASCADE` porque SQLite no la
+    aplica por defecto y en los tests se correria con esas filas huerfanas.
 
     Solo se admite el `user_id` que viene de la identidad del token, nunca uno
     recibido en el cuerpo de la peticion.
     """
+    await session.execute(
+        delete(BallchasingCredential).where(BallchasingCredential.user_id == user.id)
+    )
+    await session.execute(delete(GameAccount).where(GameAccount.user_id == user.id))
     await session.execute(delete(User).where(User.id == user.id))
     await session.commit()

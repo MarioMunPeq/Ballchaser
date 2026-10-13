@@ -9,7 +9,13 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
+from app.core.asyncio_setup import ensure_compatible_event_loop
 from app.core.config import settings
+
+# En Windows el bucle por defecto (Proactor) no sirve para psycopg asincrono. Se
+# ajusta al importar este modulo, que es quien crea el motor: asi cualquier punto
+# de entrada (la API, Alembic, un script) funciona igual sin acordarse de llamarlo.
+ensure_compatible_event_loop()
 
 
 def create_engine(url: str | None = None) -> AsyncEngine:

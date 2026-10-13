@@ -50,8 +50,11 @@ src = ["app", "tests"]
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "UP", "B", "C4", "SIM", "RUF", "S", "ANN", "ASYNC"]
 ignore = [
-    "S101", # assert: permitido en tests
+    "S101",    # assert: permitido en tests
     "ANN401",
+    # Las excepciones del proyecto se nombran en castellano (ErrorDeCifrado,
+    # TokenInvalido) y no con el sufijo `Error` que pide la regla.
+    "N818",
 ]
 
 [tool.ruff.lint.per-file-ignores]

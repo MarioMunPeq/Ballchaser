@@ -42,9 +42,19 @@ class Settings(BaseSettings):
     # en produccion cada usuario aporta el suyo y se guarda cifrado.
     ballchasing_api_key: str | None = Field(default=None, alias="BALLCASING_API_KEY")
 
-    # Fase 2: cifrado del token de Ballchasing (clave base64 de 32 bytes).
+    # Fase 2: cifrado del token de Ballchasing. La clave es base64 de 32 bytes;
+    # se genera con `python -c "from app.core.crypto import generar_clave;
+    # print(generar_clave())"`.
     secret_encryption_key: str | None = Field(default=None, alias="SECRET_ENCRYPTION_KEY")
     secret_key_version: int = Field(default=1, alias="SECRET_KEY_VERSION")
+
+    # Fase 2: limites de la API de Ballchasing para el plan sin patrocinio.
+    # El cliente se autolimita con estos valores en vez de confiar en discoverirlos.
+    ballchasing_base_url: str = Field(
+        default="https://ballchasing.com/api", alias="BALLCHASING_BASE_URL"
+    )
+    ballchasing_rate_per_second: float = Field(default=2.0, alias="BALLCHASING_RATE_PER_SECOND")
+    ballchasing_rate_per_hour: int = Field(default=500, alias="BALLCHASING_RATE_PER_HOUR")
 
     # Fase 3: proteccion del endpoint de cron llamado por GitHub Actions.
     cron_secret: str | None = Field(default=None, alias="CRON_SECRET")
