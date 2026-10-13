@@ -15,7 +15,7 @@ class ResolveVanityResponse(BaseModel):
 
 @router.get("/resolve-vanity")
 async def resolve_vanity(
-    vanity: str = Query(..., description="Nombre vanity de Steam (ej: Snakeyesmp)")
+    vanity: str = Query(..., description="Nombre vanity de Steam (ej: Snakeyesmp)"),
 ) -> ResolveVanityResponse:
     """
     Resuelve un nombre vanity de Steam a su SteamID64 (17 dígitos).
@@ -36,21 +36,16 @@ async def resolve_vanity(
             resp = await client.get(url, headers={"Accept": "application/xml"})
         except httpx.RequestError as e:
             raise HTTPException(
-                status_code=502,
-                detail=f"No se pudo conectar con Steam: {e}"
+                status_code=502, detail=f"No se pudo conectar con Steam: {e}"
             ) from e
 
     if resp.status_code == 404:
         raise HTTPException(
-            status_code=404,
-            detail=f"No existe un perfil de Steam con el nombre '{vanity_limpio}'"
+            status_code=404, detail=f"No existe un perfil de Steam con el nombre '{vanity_limpio}'"
         )
 
     if resp.status_code != 200:
-        raise HTTPException(
-            status_code=502,
-            detail=f"Steam respondió con error {resp.status_code}"
-        )
+        raise HTTPException(status_code=502, detail=f"Steam respondió con error {resp.status_code}")
 
     # Parsear XML de forma segura
     try:
@@ -58,13 +53,11 @@ async def resolve_vanity(
         steam_id = root.findtext(".//steamID64")
         if not steam_id:
             raise HTTPException(
-                status_code=404,
-                detail=f"No se encontró steamID64 para '{vanity_limpio}'"
+                status_code=404, detail=f"No se encontró steamID64 para '{vanity_limpio}'"
             )
     except Exception as e:
         raise HTTPException(
-            status_code=502,
-            detail=f"Error parseando respuesta de Steam: {e}"
+            status_code=502, detail=f"Error parseando respuesta de Steam: {e}"
         ) from e
 
     return ResolveVanityResponse(
