@@ -152,6 +152,14 @@ export function PaginaAjustes() {
             . Si tu URL es <span className="mono">/id/Tunombre</span>, cambia a
             <span className="mono">/profiles/</span> para ver el número.
           </p>
+          <a
+            href="https://steamcommunity.com/my/profile"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="boton-secundario"
+          >
+            Abrir mi perfil de Steam
+          </a>
 
           <label htmlFor="nombre">Nombre en el juego (opcional)</label>
           <input id="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} />
