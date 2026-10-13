@@ -5,11 +5,15 @@ de pruebas corre contra Postgres definiendo `TEST_DATABASE_URL`.
 """
 
 import os
+import tempfile
 from collections.abc import AsyncIterator, Iterator
 from contextlib import suppress
+from pathlib import Path
 
 import firebase_admin
 import pytest
+from alembic import command
+from alembic.config import Config
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import delete, text
@@ -19,7 +23,6 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
-from sqlalchemy.pool import StaticPool
 
 from app.core.config import settings
 from app.core.security import get_identity_verifier
@@ -28,7 +31,14 @@ from app.db.session import get_session
 from app.main import create_app
 from tests.fakes import FakeIdentityVerifier
 
-TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+BACKEND_DIR = Path(__file__).resolve().parents[1]
+
+# Por defecto, un fichero SQLite temporal. No se usa `sqlite:///:memory:` porque
+# Alembic abre su propia conexion (y con `:memory:` cada conexion ve una base
+# distinta, asi que las migraciones se aplicarian sobre otra base vacia).
+TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL", "") or (
+    f"sqlite+aiosqlite:///{Path(tempfile.gettempdir()) / 'ballchaser_tests.sqlite3'}"
+)
 
 
 @pytest.fixture(autouse=True)
@@ -58,17 +68,38 @@ def anyio_backend() -> str:
 
 @pytest.fixture
 async def engine() -> AsyncIterator[AsyncEngine]:
-    """Motor de prueba con las tablas creadas."""
-    kwargs: dict[str, object] = {}
-    if TEST_DATABASE_URL.startswith("sqlite"):
-        # Una unica conexion en memoria compartida por todas las del test.
-        kwargs = {"poolclass": StaticPool, "connect_args": {"check_same_thread": False}}
+    """Motor de prueba con el esquema construido por las migraciones.
 
-    test_engine = create_async_engine(TEST_DATABASE_URL, **kwargs)
-    async with test_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    Se usa Alembic y no `create_all` a proposito: si el modelo y la migracion se
+    desincronizan, aqui falla el test en vez de producción. Ademas deja el esquema
+    limpio al terminar, para que el siguiente test no lo herede.
+    """
+    test_engine = create_async_engine(TEST_DATABASE_URL)
+    await _migrar(test_engine, "head")
     yield test_engine
+    await _migrar(test_engine, "base")
     await test_engine.dispose()
+
+
+async def _migrar(test_engine: AsyncEngine, revision: str) -> None:
+    """Ejecuta `alembic upgrade/downgrade` reutilizando el motor de pruebas.
+
+    Se pasa la conexion ya abierta en vez de dejar que Alembic cree la suya: asi
+    las migraciones se aplican exactamente sobre la base que usa el test.
+    """
+    config = Config(str(BACKEND_DIR / "alembic.ini"))
+    config.set_main_option("script_location", str(BACKEND_DIR / "migrations"))
+    config.set_main_option("sqlalchemy.url", TEST_DATABASE_URL)
+    comando = command.upgrade if revision != "base" else command.downgrade
+
+    async with test_engine.begin() as conn:
+        await conn.run_sync(lambda sync_conn: _con_conexion(config, sync_conn, comando, revision))
+
+
+def _con_conexion(config: Config, sync_conn: object, comando: object, revision: str) -> None:
+    config.attributes["connection"] = sync_conn
+    comando(config, revision)  # type: ignore[operator]
+    config.attributes.pop("connection", None)
 
 
 @pytest.fixture

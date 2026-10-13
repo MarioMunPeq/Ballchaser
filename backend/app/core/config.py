@@ -38,6 +38,10 @@ class Settings(BaseSettings):
     firebase_credentials_file: str | None = Field(default=None, alias="FIREBASE_CREDENTIALS_FILE")
     firebase_credentials_json: str | None = Field(default=None, alias="FIREBASE_CREDENTIALS_JSON")
 
+    # Fase 2: token de Ballchasing. Solo se usa en desarrollo para sondear la API;
+    # en produccion cada usuario aporta el suyo y se guarda cifrado.
+    ballchasing_api_key: str | None = Field(default=None, alias="BALLCASING_API_KEY")
+
     # Fase 2: cifrado del token de Ballchasing (clave base64 de 32 bytes).
     secret_encryption_key: str | None = Field(default=None, alias="SECRET_ENCRYPTION_KEY")
     secret_key_version: int = Field(default=1, alias="SECRET_KEY_VERSION")

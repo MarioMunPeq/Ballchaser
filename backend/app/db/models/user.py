@@ -24,10 +24,11 @@ class User(Base):
     display_name: Mapped[str | None] = mapped_column(String(128))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        # Default en Python (portable entre Postgres y SQLite) y en servidor para
-        # las filas que creen las migraciones.
+        # Default en Python (el ORM lo rellena siempre) y en servidor para las
+        # filas que cree SQL. `CURRENT_TIMESTAMP` existe en Postgres y en SQLite;
+        # `now()` solo en Postgres.
         default=lambda: datetime.now(UTC),
-        server_default=func.now(),
+        server_default=func.current_timestamp(),
         nullable=False,
     )
 

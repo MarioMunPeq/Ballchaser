@@ -46,8 +46,14 @@ jobs:
       - name: Migraciones (SQL generado para Postgres)
         run: alembic upgrade head --sql
 
+      # Se audita la lista de dependencias congelada y no el entorno entero:
+      # `ballchaser-api` se instala en editable y no existe en PyPI, asi que
+      # `pip-audit` lo trataria como vulnerabilidad.
+      - name: Congelar dependencias
+        run: pip list --format=freeze | grep -v -e "^-e " -e "^ballchaser" > requirements-ci.txt
+
       - name: Auditoria de dependencias
-        run: pip-audit --strict
+        run: pip-audit --strict -r requirements-ci.txt
 
   backend-postgres:
     name: Backend (tests contra Postgres real)

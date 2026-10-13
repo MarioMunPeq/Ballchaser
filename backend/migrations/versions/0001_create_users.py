@@ -26,7 +26,9 @@ def upgrade() -> None:
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
-            server_default=sa.text("now()"),
+            # CURRENT_TIMESTAMP y no now(): asi la misma migracion corre en SQLite
+            # (los tests) y en Postgres (produccion).
+            server_default=sa.func.current_timestamp(),
             nullable=False,
         ),
         sa.PrimaryKeyConstraint("id", name="pk_users"),

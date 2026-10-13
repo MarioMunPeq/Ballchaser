@@ -22,14 +22,17 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-config.set_main_option("sqlalchemy.url", settings.database_url)
+# `alembic.ini` llega sin URL: se usa la de la configuracion. Los tests, en cambio,
+# pasan la suya por codigo y esa manda, para no depender del entorno.
+if not config.get_main_option("sqlalchemy.url", None):
+    config.set_main_option("sqlalchemy.url", settings.database_url)
 target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
     """Genera el SQL sin conectar a la base de datos."""
     context.configure(
-        url=settings.database_url,
+        url=config.get_main_option("sqlalchemy.url"),
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
@@ -51,13 +54,22 @@ async def run_async_migrations() -> None:
         prefix="sqlalchemy.",
         poolclass=NullPool,
     )
-    async with connectable.connect() as connection:
-        await connection.run_sync(do_run_migrations)
+    async with connectable.connect() as conn:
+        await conn.run_sync(do_run_migrations)
     await connectable.dispose()
 
 
 def run_migrations_online() -> None:
     """Aplica las migraciones contra la base de datos configurada."""
+    # Los tests invocan Alembic desde dentro del bucle de eventos, con una conexion
+    # ya abierta en `config.attributes`. En ese caso no se puede usar `asyncio.run`
+    # (daria "asyncio.run() cannot be called from a running event loop"), asi que se
+    # migra sobre esa conexion sincrona directamente.
+    conexion = config.attributes.get("connection")
+    if conexion is not None:
+        do_run_migrations(conexion)
+        return
+
     asyncio.run(run_async_migrations())
 
 
